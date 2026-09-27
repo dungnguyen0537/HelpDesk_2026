@@ -98,18 +98,16 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center space-x-3">
           <Button
-            variant="outline"
+            variant="light"
             size="md"
-            className="bg-white/10 hover:bg-white/20 text-white border-white/20"
             onClick={() => navigate('/tickets')}
           >
             Xem danh sách phiếu
           </Button>
           <Button
-            variant="primary"
+            variant="white"
             size="md"
             icon={Plus}
-            className="bg-white text-primary-900 hover:bg-slate-100 shadow-md"
             onClick={() => navigate('/tickets/new')}
           >
             Tạo Ticket Mới

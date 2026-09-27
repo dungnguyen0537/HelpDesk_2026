@@ -21,6 +21,8 @@ export default function Button({
     outline: 'border border-slate-300 hover:bg-slate-50 text-slate-700 focus:ring-primary-500 bg-white shadow-sm',
     danger: 'bg-rose-600 hover:bg-rose-700 text-white focus:ring-rose-500 shadow-sm',
     ghost: 'hover:bg-slate-100 text-slate-600 hover:text-slate-900',
+    white: 'bg-white hover:bg-slate-100 text-slate-900 font-semibold shadow-md border border-slate-200/50',
+    light: 'bg-white/15 hover:bg-white/25 text-white border border-white/20 backdrop-blur-xs',
   };
 
   const sizes = {
