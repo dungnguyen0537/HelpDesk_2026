@@ -69,7 +69,11 @@ export default function LoginPage() {
 
       if (response && response.token) {
         login(response.user, response.token);
-        navigate('/dashboard');
+        if (response.user?.role === 'CUSTOMER') {
+          navigate('/portal');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setErrorMsg('Tên đăng nhập hoặc mật khẩu không chính xác.');
       }
