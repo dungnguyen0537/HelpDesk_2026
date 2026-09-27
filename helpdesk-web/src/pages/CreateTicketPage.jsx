@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -7,6 +7,7 @@ import {
   X,
   AlertCircle,
   CheckCircle2,
+  Image as ImageIcon,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -17,6 +18,7 @@ import { useAuthStore } from '../store/authStore';
 
 export default function CreateTicketPage() {
   const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -26,10 +28,8 @@ export default function CreateTicketPage() {
     description: '',
   });
 
-  const [attachments, setAttachments] = useState([
-    { name: 'error_screenshot.png', size: '1.2 MB' },
-  ]);
-
+  const [attachments, setAttachments] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -39,6 +39,69 @@ export default function CreateTicketPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const processFiles = (files) => {
+    const fileArray = Array.from(files);
+    fileArray.forEach((file) => {
+      const sizeStr =
+        file.size < 1024 * 1024
+          ? `${(file.size / 1024).toFixed(0)} KB`
+          : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+      const isImage = file.type.startsWith('image/');
+
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setAttachments((prev) => [
+            ...prev,
+            {
+              name: file.name,
+              size: sizeStr,
+              type: file.type,
+              dataUrl: e.target.result,
+              isImage: true,
+            },
+          ]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setAttachments((prev) => [
+          ...prev,
+          {
+            name: file.name,
+            size: sizeStr,
+            type: file.type || 'application/octet-stream',
+            isImage: false,
+          },
+        ]);
+      }
+    });
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(e.target.files);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
   };
 
   const handleRemoveFile = (index) => {
@@ -191,33 +254,73 @@ export default function CreateTicketPage() {
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Tệp tin đính kèm (Ảnh chụp lỗi, file log, tài liệu liên quan)
             </label>
-            <div className="border-2 border-dashed border-slate-300 hover:border-primary-500 rounded-xl p-6 text-center cursor-pointer transition-colors bg-slate-50/50">
+            
+            {/* Hidden native input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx,.txt,.log,.zip,.rar"
+            />
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                isDragging
+                  ? 'border-primary-500 bg-primary-50/60 ring-2 ring-primary-500/20'
+                  : 'border-slate-300 hover:border-primary-500 bg-slate-50/50 hover:bg-slate-50'
+              }`}
+            >
               <UploadCloud className="w-8 h-8 text-primary-500 mx-auto mb-2" />
               <p className="text-xs font-medium text-slate-700">
-                Kéo thả tệp vào đây hoặc <span className="text-primary-600 font-semibold underline">Duyệt file từ máy tính</span>
+                Kéo thả hình ảnh hoặc tệp vào đây hoặc{' '}
+                <span className="text-primary-600 font-semibold underline">Duyệt file từ máy tính</span>
               </p>
               <p className="text-[11px] text-slate-400 mt-1">
-                Hỗ trợ PNG, JPG, PDF, DOCX, ZIP tối đa 20MB/file
+                Hỗ trợ PNG, JPG, GIF, WebP, PDF, DOCX, ZIP tối đa 20MB/file
               </p>
             </div>
 
-            {/* Uploaded Files List */}
+            {/* Uploaded Files & Image Previews List */}
             {attachments.length > 0 && (
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {attachments.map((file, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 bg-white text-xs"
+                    className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-white text-xs shadow-2xs hover:border-slate-300 transition-colors"
                   >
-                    <div className="flex items-center space-x-2">
-                      <FileText className="w-4 h-4 text-primary-600" />
-                      <span className="font-medium text-slate-800">{file.name}</span>
-                      <span className="text-slate-400">({file.size})</span>
+                    <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                      {file.isImage && file.dataUrl ? (
+                        <img
+                          src={file.dataUrl}
+                          alt={file.name}
+                          className="w-10 h-10 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0 text-primary-600">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <span className="font-semibold text-slate-800 block truncate" title={file.name}>
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">{file.size}</span>
+                      </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleRemoveFile(idx)}
-                      className="text-slate-400 hover:text-rose-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveFile(idx);
+                      }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors ml-2"
+                      title="Xóa tệp này"
                     >
                       <X className="w-4 h-4" />
                     </button>

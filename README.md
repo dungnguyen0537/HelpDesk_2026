@@ -414,6 +414,13 @@ Hệ thống đã nạp sẵn dữ liệu mẫu phục vụ kiểm thử và đ�
 > **QUY TẮC BẮT BUỘC CỦA DỰ ÁN**: Mỗi khi mã nguồn hoặc tính năng được cải tiến, bổ sung hay chỉnh sửa, tệp `README.md` này **bắt buộc phải được cập nhật đồng thời** để phản ánh chính xác nhất hiện trạng kỹ thuật của hệ thống.
 
 ### Lịch Sử Phiên Bản (Release History):
+* **v2.6.1 (2026-09-27)**:
+  - **Sửa lỗi & Nâng cấp Hệ thống Đính kèm Tệp tin & Hình ảnh Sự cố**:
+    + Khắc phục sự cố không thể chọn tệp trên cả 2 giao diện `CreateTicketPage` và `CustomerCreateTicketPage`: Bổ sung `<input type="file" ref={...}>` liên kết hoàn chỉnh với vùng Dropzone.
+    + Bổ sung tính năng kéo thả tệp tin (Drag & Drop) trực tiếp với hiệu ứng giao diện trực quan khi rê chuột.
+    + Tích hợp bộ đọc `FileReader` xử lý hình ảnh thành Base64 Data URL, hiển thị ảnh thu nhỏ (Thumbnail Preview) tức thì ngay trong biểu mẫu tạo phiếu.
+    + Cho phép đính kèm đa dạng định dạng: Ảnh chụp màn hình (PNG, JPG, GIF, WebP), tài liệu văn phòng (PDF, DOCX), mã nguồn & log hệ thống (TXT, LOG), tệp nén (ZIP, RAR).
+    + Tích hợp cửa sổ trình chiếu phóng to (Lightbox Modal) và nút Tải về (Download) trên trang chi tiết sự cố `TicketDetailPage`.
 * **v2.6.0 (2026-09-27)**:
   - **Hoàn thiện trọn vẹn Tầng Nghiệp vụ & API Backend (`helpdesk-api`)**:
     + Xây dựng đầy đủ 8 Spring Data JPA Repositories: `UserRepository`, `TicketRepository`, `DepartmentRepository`, `CategoryRepository`, `PriorityRepository`, `SlaPolicyRepository`, `TicketCommentRepository`, `TicketHistoryRepository`, `AgentProfileRepository`.

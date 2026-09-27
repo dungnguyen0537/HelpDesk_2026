@@ -12,6 +12,11 @@ import {
   History,
   ShieldAlert,
   RotateCcw,
+  ExternalLink,
+  Eye,
+  X,
+  Download,
+  FileText,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -39,6 +44,7 @@ export default function TicketDetailPage() {
 
   const [activeCommentTab, setActiveCommentTab] = useState('PUBLIC'); // 'PUBLIC' or 'INTERNAL'
   const [commentText, setCommentText] = useState('');
+  const [previewModal, setPreviewModal] = useState(null); // { url, name }
 
   // Find ticket from store by ID or fallback to first
   const ticket = tickets.find((t) => t.id === id) || tickets[0];
@@ -173,20 +179,57 @@ export default function TicketDetailPage() {
 
             {ticket.attachments && ticket.attachments.length > 0 && (
               <div className="mt-4 pt-4 border-t border-slate-100">
-                <span className="text-xs font-semibold text-slate-600 block mb-2">
-                  Tệp đính kèm ({ticket.attachments.length}):
+                <span className="text-xs font-semibold text-slate-700 block mb-2.5">
+                  Tệp & Hình ảnh đính kèm ({ticket.attachments.length}):
                 </span>
-                <div className="flex flex-wrap gap-2">
-                  {ticket.attachments.map((file, idx) => (
-                    <div
-                      key={idx}
-                      className="inline-flex items-center space-x-2 p-2 rounded-lg border border-slate-200 bg-slate-50 text-xs"
-                    >
-                      <Paperclip className="w-3.5 h-3.5 text-slate-500" />
-                      <span className="font-medium text-slate-700">{file.name}</span>
-                      {file.size && <span className="text-slate-400">({file.size})</span>}
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {ticket.attachments.map((file, idx) => {
+                    const isImg = file.isImage || (file.dataUrl && file.dataUrl.startsWith('data:image')) || (file.name && /\.(png|jpe?g|gif|webp|bmp)$/i.test(file.name));
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center space-x-2.5 p-2 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-slate-300 transition-all text-xs group"
+                      >
+                        {isImg && file.dataUrl ? (
+                          <div
+                            onClick={() => setPreviewModal({ url: file.dataUrl, name: file.name })}
+                            className="relative w-12 h-12 rounded-lg overflow-hidden border border-slate-200 cursor-pointer flex-shrink-0 group/img"
+                            title="Bấm để xem ảnh phóng to"
+                          >
+                            <img
+                              src={file.dataUrl}
+                              alt={file.name}
+                              className="w-full h-full object-cover group-hover/img:scale-105 transition-transform"
+                            />
+                            <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-white">
+                              <Eye className="w-3.5 h-3.5" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-primary-100/70 flex items-center justify-center flex-shrink-0 text-primary-600">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <span className="font-semibold text-slate-800 block truncate" title={file.name}>
+                            {file.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400 block">{file.size || 'Tệp đính kèm'}</span>
+                          {file.dataUrl && (
+                            <a
+                              href={file.dataUrl}
+                              download={file.name}
+                              className="text-[10px] text-primary-600 hover:underline font-medium inline-flex items-center space-x-0.5 mt-0.5"
+                            >
+                              <Download className="w-2.5 h-2.5 mr-0.5" />
+                              <span>Tải về</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -449,6 +492,48 @@ export default function TicketDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Lightbox Modal for Image Preview */}
+      {previewModal && (
+        <div
+          onClick={() => setPreviewModal(null)}
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col"
+          >
+            <div className="flex items-center justify-between p-3.5 bg-slate-950 text-white border-b border-slate-800">
+              <span className="text-xs font-semibold truncate max-w-md">{previewModal.name}</span>
+              <div className="flex items-center space-x-2">
+                <a
+                  href={previewModal.url}
+                  download={previewModal.name}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                  title="Tải ảnh về máy"
+                >
+                  <Download className="w-4 h-4" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewModal(null)}
+                  className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition-colors"
+                  title="Đóng xem trước"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-2 flex items-center justify-center overflow-auto max-h-[calc(90vh-60px)]">
+              <img
+                src={previewModal.url}
+                alt={previewModal.name}
+                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

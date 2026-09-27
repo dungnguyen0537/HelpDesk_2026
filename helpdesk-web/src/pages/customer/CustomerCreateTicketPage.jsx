@@ -35,7 +35,9 @@ export default function CustomerCreateTicketPage() {
     phone: '0912.345.678',
   });
 
+  const fileInputRef = useRef(null);
   const [attachments, setAttachments] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdTicket, setCreatedTicket] = useState(null);
 
@@ -70,9 +72,67 @@ export default function CustomerCreateTicketPage() {
   const { createTicket } = useTicketStore();
   const { user } = useAuthStore();
 
+  const processFiles = (files) => {
+    const fileArray = Array.from(files);
+    fileArray.forEach((file) => {
+      const sizeStr =
+        file.size < 1024 * 1024
+          ? `${(file.size / 1024).toFixed(0)} KB`
+          : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+      const isImage = file.type.startsWith('image/');
+
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setAttachments((prev) => [
+            ...prev,
+            {
+              name: file.name,
+              size: sizeStr,
+              type: file.type,
+              dataUrl: e.target.result,
+              isImage: true,
+            },
+          ]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setAttachments((prev) => [
+          ...prev,
+          {
+            name: file.name,
+            size: sizeStr,
+            type: file.type || 'application/octet-stream',
+            isImage: false,
+          },
+        ]);
+      }
+    });
+  };
+
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    setAttachments((prev) => [...prev, ...files]);
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(e.target.files);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
   };
 
   const removeFile = (index) => {
@@ -85,11 +145,6 @@ export default function CustomerCreateTicketPage() {
 
     const selectedCategoryObj = categories.find((c) => c.id === formData.category);
     const categoryName = selectedCategoryObj ? selectedCategoryObj.name.split(' (')[0] : 'Hỗ trợ kỹ thuật';
-
-    const uploadedAttachments = attachments.map((f) => ({
-      name: f.name,
-      size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
-    }));
 
     const creatorName = user ? `${user.fullName} (${user.department || 'Khách hàng'})` : 'Nguyễn Thu Trang (Marketing)';
     const creatorEmail = user?.email || 'customer@company.com';
@@ -105,7 +160,7 @@ export default function CustomerCreateTicketPage() {
       phone: formData.phone,
       creator: creatorName,
       creatorEmail: creatorEmail,
-      attachments: uploadedAttachments,
+      attachments: attachments,
     });
 
     setTimeout(() => {
@@ -336,39 +391,73 @@ export default function CustomerCreateTicketPage() {
           <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
             Đính Kèm Ảnh Chụp Lỗi Hoặc File Log (Tùy chọn)
           </label>
-          <div className="border-2 border-dashed border-slate-200 hover:border-primary-400 rounded-2xl p-6 text-center transition-colors">
-            <Upload className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-            <p className="text-xs text-slate-600 font-medium">
+
+          {/* Hidden native input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            multiple
+            onChange={handleFileChange}
+            className="hidden"
+            accept="image/*,.pdf,.doc,.docx,.txt,.log,.zip,.rar"
+          />
+
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+              isDragging
+                ? 'border-primary-500 bg-primary-50/60 ring-2 ring-primary-500/20'
+                : 'border-slate-200 hover:border-primary-400 hover:bg-slate-50/60'
+            }`}
+          >
+            <Upload className="w-8 h-8 text-primary-500 mx-auto mb-2" />
+            <p className="text-xs text-slate-700 font-medium">
               Kéo thả hình ảnh chụp lỗi vào đây hoặc{' '}
-              <label className="text-primary-600 hover:underline cursor-pointer font-bold">
-                chọn từ máy tính
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept="image/*,.pdf,.txt,.log,.docx"
-                />
-              </label>
+              <span className="text-primary-600 font-bold underline">chọn từ máy tính</span>
             </p>
-            <p className="text-[11px] text-slate-400 mt-1">Hỗ trợ JPG, PNG, PDF, DOCX dung lượng tối đa 15MB/file</p>
+            <p className="text-[11px] text-slate-400 mt-1">Hỗ trợ JPG, PNG, GIF, WebP, PDF, DOCX dung lượng tối đa 15MB/file</p>
           </div>
 
+          {/* Uploaded Files & Image Previews List */}
           {attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
               {attachments.map((file, i) => (
                 <div
                   key={i}
-                  className="flex items-center space-x-2 bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs"
+                  className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50/80 text-xs shadow-2xs hover:border-slate-300 transition-colors"
                 >
-                  <FileText className="w-3.5 h-3.5 text-primary-600" />
-                  <span className="max-w-[150px] truncate">{file.name}</span>
+                  <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                    {file.isImage && file.dataUrl ? (
+                      <img
+                        src={file.dataUrl}
+                        alt={file.name}
+                        className="w-10 h-10 rounded-lg object-cover border border-slate-200 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-primary-100/70 flex items-center justify-center flex-shrink-0 text-primary-600">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="font-semibold text-slate-800 block truncate" title={file.name}>
+                        {file.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block">{file.size}</span>
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => removeFile(i)}
-                    className="text-slate-400 hover:text-rose-500"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(i);
+                    }}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors ml-2"
+                    title="Xóa tệp này"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               ))}
