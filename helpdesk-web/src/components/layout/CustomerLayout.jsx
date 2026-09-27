@@ -113,6 +113,16 @@ export default function CustomerLayout() {
 
           {/* Right Action buttons */}
           <div className="flex items-center space-x-3">
+            {user?.role && user.role !== 'CUSTOMER' && (
+              <Link
+                to="/dashboard"
+                className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold shadow-xs transition-colors"
+                title="Quay lại Bảng điều hành quản trị kỹ thuật"
+              >
+                <span>Trang Quản Trị</span>
+              </Link>
+            )}
+
             {/* Primary Action Button */}
             <Link
               to="/portal/create-ticket"
@@ -129,7 +139,7 @@ export default function CustomerLayout() {
                   {user?.fullName || 'Người Dùng'}
                 </span>
                 <span className="block text-[10px] text-emerald-600 font-medium leading-none mt-0.5">
-                  Khách Hàng / Nhân Viên
+                  {user?.role === 'CUSTOMER' ? 'Khách Hàng / Người Dùng' : `Tài khoản: ${user?.role}`}
                 </span>
               </div>
 

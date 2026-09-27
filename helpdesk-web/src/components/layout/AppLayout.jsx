@@ -1,10 +1,18 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import ChatbotWidget from '../chat/ChatbotWidget';
+import { useAuthStore } from '../../store/authStore';
 
 export default function AppLayout() {
+  const { user } = useAuthStore();
+
+  // Chặn hoàn toàn: Khách hàng / Người dùng tuyệt đối không được truy cập Console Quản trị kỹ thuật
+  if (user?.role === 'CUSTOMER') {
+    return <Navigate to="/portal" replace />;
+  }
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       {/* Sidebar */}

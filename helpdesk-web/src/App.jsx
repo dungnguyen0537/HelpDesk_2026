@@ -68,10 +68,10 @@ export default function App() {
           <Route path="faq" element={<CustomerFAQPage />} />
         </Route>
 
-        {/* 2. ADMIN & STAFF CONSOLE LAYOUT (Admin / Agent / Manager) */}
+        {/* 2. ADMIN & STAFF CONSOLE LAYOUT (Admin / Agent / Manager ONLY) */}
         <Route
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'AGENT']}>
               <AppLayout />
             </ProtectedRoute>
           }
