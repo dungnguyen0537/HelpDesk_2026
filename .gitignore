@@ -26,7 +26,11 @@ Thumbs.db
 
 # Environment variables & secrets
 .env
+*.env
+*.env.*
+!.env.example
 helpdesk-api/.env
+helpdesk-web/.env
 helpdesk-web/.env.local
 
 # Logs & uploads

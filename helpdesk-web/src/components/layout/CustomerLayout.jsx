@@ -15,6 +15,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import ChatbotWidget from '../chat/ChatbotWidget';
 
 export default function CustomerLayout() {
   const { user, logout } = useAuthStore();
@@ -205,6 +206,9 @@ export default function CustomerLayout() {
           </div>
         </div>
       </footer>
+
+      {/* Floating AI Chatbot Widget */}
+      <ChatbotWidget />
     </div>
   );
 }
