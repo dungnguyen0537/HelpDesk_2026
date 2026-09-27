@@ -414,6 +414,14 @@ Hệ thống đã nạp sẵn dữ liệu mẫu phục vụ kiểm thử và đ�
 > **QUY TẮC BẮT BUỘC CỦA DỰ ÁN**: Mỗi khi mã nguồn hoặc tính năng được cải tiến, bổ sung hay chỉnh sửa, tệp `README.md` này **bắt buộc phải được cập nhật đồng thời** để phản ánh chính xác nhất hiện trạng kỹ thuật của hệ thống.
 
 ### Lịch Sử Phiên Bản (Release History):
+* **v2.6.3 (2026-09-27)**:
+  - **Triển khai toàn diện Trung Tâm Tri Thức & Cẩm Nang Kỹ Thuật (`/knowledge-base`)**:
+    + Xây dựng kho dữ liệu 8 bài hướng dẫn kỹ thuật chi tiết: Cài đặt và cấu hình VPN FortiClient, xử lý Outlook Disconnected, Map ổ đĩa mạng chia sẻ NAS (Z:), sửa lỗi máy in Offline & kẹt lệnh Print Spooler, quy tắc mật khẩu Domain & tự mở khóa 5 lần, khắc phục Wi-Fi No Internet (lệnh ipconfig /release /flushdns /renew), cấu hình phần mềm kế toán MISA SQL Server, kích hoạt xác thực 2 bước (2FA).
+    + Tích hợp **Cửa sổ Đọc Tài Liệu Chi Tiết (Article Reader Modal)**: Định dạng Markdown trực quan, chia đề mục rõ ràng, hiển thị code block dòng lệnh terminal `bash`/`cmd`.
+    + Hệ thống đánh giá tính hữu ích (Helpfulness Rating): Nút bấm Hữu ích (Thumbs-Up) / Chưa rõ (Thumbs-Down) tự động cập nhật số lượt bình chọn thời gian thực.
+    + Tính năng Sao chép liên kết nhanh (Share link) và nút chuyển tiếp Tạo phiếu yêu cầu khẩn cấp khi người dùng chưa tự xử lý được.
+    + Bộ lọc đa tiêu chí theo 4 danh mục chuyên sâu và ô tìm kiếm toàn văn theo tiêu đề, tóm tắt hoặc nội dung.
+    + Hỗ trợ Modal đăng tải bài viết cẩm nang mới cho Kỹ thuật viên & Quản trị viên (`ADMIN`, `AGENT`, `MANAGER`).
 * **v2.6.2 (2026-09-27)**:
   - **Triển khai phân hệ Quản lý Phòng Ban & Danh mục Sự cố (`/admin/departments`)**:
     + Thiết kế giao diện kép Tab linh hoạt: Tab Phòng ban & Tab Danh mục sự cố.
