@@ -414,6 +414,14 @@ Hệ thống đã nạp sẵn dữ liệu mẫu phục vụ kiểm thử và đ�
 > **QUY TẮC BẮT BUỘC CỦA DỰ ÁN**: Mỗi khi mã nguồn hoặc tính năng được cải tiến, bổ sung hay chỉnh sửa, tệp `README.md` này **bắt buộc phải được cập nhật đồng thời** để phản ánh chính xác nhất hiện trạng kỹ thuật của hệ thống.
 
 ### Lịch Sử Phiên Bản (Release History):
+* **v2.6.4 (2026-09-27)**:
+  - **Khắc phục triệt để lỗi hiển thị nội dung bài viết Cơ sở tri thức (Markdown Parser & Visual Formatter)**:
+    + Xây dựng bộ phân tích cú pháp `renderArticleBody` chuyên dụng xử lý Markdown hoàn chỉnh từng dòng.
+    + Khắc phục hiện tượng văn bản dính liền thành một khối và lộ ký tự cú pháp: Tự động bóc tách và định dạng in đậm `**text**` thành `<strong>`, mã nội dòng `` `code` `` thành khối code chuyên nghiệp.
+    + Định dạng danh sách có thứ tự `1.`, `2.` thành các huy hiệu số tròn nổi bật (`rounded-full bg-primary-100 text-primary-700`).
+    + Định dạng danh sách gạch đầu dòng `-`, `*` thành các điểm chấm màu xanh nhận diện trực quan.
+    + Định dạng tiêu đề cấp 3 `###` thành các thanh phân tách phân mục trang trọng có viền gạch dưới.
+    + Đóng gói khung lệnh Terminal nền đen viền kim loại cho các khối mã nguồn nhiều dòng ````bash````.
 * **v2.6.3 (2026-09-27)**:
   - **Triển khai toàn diện Trung Tâm Tri Thức & Cẩm Nang Kỹ Thuật (`/knowledge-base`)**:
     + Xây dựng kho dữ liệu 8 bài hướng dẫn kỹ thuật chi tiết: Cài đặt và cấu hình VPN FortiClient, xử lý Outlook Disconnected, Map ổ đĩa mạng chia sẻ NAS (Z:), sửa lỗi máy in Offline & kẹt lệnh Print Spooler, quy tắc mật khẩu Domain & tự mở khóa 5 lần, khắc phục Wi-Fi No Internet (lệnh ipconfig /release /flushdns /renew), cấu hình phần mềm kế toán MISA SQL Server, kích hoạt xác thực 2 bước (2FA).

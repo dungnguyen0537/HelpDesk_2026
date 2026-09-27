@@ -308,6 +308,124 @@ Xác thực 2 yếu tố yêu cầu ngoài mật khẩu, bạn cần nhập thê
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  // Helper to format inline markdown (bold, inline code) safely
+  const renderInlineFormatted = (rawText) => {
+    // Replace inline code `code`
+    let formatted = rawText.replace(
+      /`([^`]+)`/g,
+      '<code class="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-800 font-mono text-[11px] border border-slate-200 font-semibold">$1</code>'
+    );
+    // Replace **bold**
+    formatted = formatted.replace(
+      /\*\*([^*]+)\*\*/g,
+      '<strong class="font-bold text-slate-900">$1</strong>'
+    );
+    return formatted;
+  };
+
+  // Render article content block by block with complete formatting
+  const renderArticleBody = (content) => {
+    if (!content) return null;
+
+    const lines = content.split('\n');
+    const elements = [];
+    let inCodeBlock = false;
+    let codeBuffer = [];
+
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+
+      // Check code block fences
+      if (trimmed.startsWith('```')) {
+        if (inCodeBlock) {
+          elements.push(
+            <div
+              key={`code-${index}`}
+              className="my-3 p-4 rounded-xl bg-slate-950 text-emerald-400 font-mono text-xs overflow-x-auto border border-slate-800 shadow-inner"
+            >
+              <pre>{codeBuffer.join('\n')}</pre>
+            </div>
+          );
+          codeBuffer = [];
+          inCodeBlock = false;
+        } else {
+          inCodeBlock = true;
+        }
+        return;
+      }
+
+      if (inCodeBlock) {
+        codeBuffer.push(line);
+        return;
+      }
+
+      // Empty line -> spacing
+      if (!trimmed) {
+        elements.push(<div key={`sp-${index}`} className="h-2" />);
+        return;
+      }
+
+      // Heading 3
+      if (trimmed.startsWith('### ')) {
+        const title = trimmed.replace('### ', '');
+        elements.push(
+          <h3
+            key={`h3-${index}`}
+            className="text-sm sm:text-base font-bold text-slate-900 mt-4 mb-2 pb-1.5 border-b border-slate-100 flex items-center space-x-2"
+          >
+            <span dangerouslySetInnerHTML={{ __html: renderInlineFormatted(title) }} />
+          </h3>
+        );
+        return;
+      }
+
+      // Numbered List: 1. Item, 2. Item
+      const orderedMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+      if (orderedMatch) {
+        const num = orderedMatch[1];
+        const text = orderedMatch[2];
+        elements.push(
+          <div key={`ol-${index}`} className="flex items-start space-x-2.5 my-1.5 ml-2">
+            <span className="w-5 h-5 rounded-full bg-primary-100 text-primary-700 font-bold text-[11px] flex items-center justify-center flex-shrink-0 mt-0.5">
+              {num}
+            </span>
+            <div
+              className="text-xs sm:text-sm text-slate-700 leading-relaxed flex-1"
+              dangerouslySetInnerHTML={{ __html: renderInlineFormatted(text) }}
+            />
+          </div>
+        );
+        return;
+      }
+
+      // Bullet List: - Item or * Item or + Item
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('+ ')) {
+        const text = trimmed.substring(2);
+        elements.push(
+          <div key={`ul-${index}`} className="flex items-start space-x-2 my-1 ml-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary-600 mt-2 flex-shrink-0" />
+            <div
+              className="text-xs sm:text-sm text-slate-700 leading-relaxed flex-1"
+              dangerouslySetInnerHTML={{ __html: renderInlineFormatted(text) }}
+            />
+          </div>
+        );
+        return;
+      }
+
+      // Regular Paragraph
+      elements.push(
+        <p
+          key={`p-${index}`}
+          className="text-xs sm:text-sm text-slate-700 leading-relaxed my-1"
+          dangerouslySetInnerHTML={{ __html: renderInlineFormatted(line) }}
+        />
+      );
+    });
+
+    return elements;
+  };
+
   // Filter Articles
   const filteredArticles = articles.filter((art) => {
     const matchesCategory = selectedCategory === 'ALL' || art.category === selectedCategory;
@@ -552,30 +670,8 @@ Xác thực 2 yếu tố yêu cầu ngoài mật khẩu, bạn cần nhập thê
               </div>
 
               {/* Render formatted content */}
-              <div className="space-y-3 font-sans">
-                {selectedArticle.content.split('\n\n').map((paragraph, pIdx) => {
-                  if (paragraph.startsWith('### ')) {
-                    return (
-                      <h3 key={pIdx} className="text-sm font-bold text-slate-900 mt-4 pt-2 border-t border-slate-100">
-                        {paragraph.replace('### ', '')}
-                      </h3>
-                    );
-                  }
-                  if (paragraph.startsWith('```')) {
-                    const lines = paragraph.split('\n');
-                    const code = lines.slice(1, -1).join('\n');
-                    return (
-                      <div key={pIdx} className="bg-slate-900 text-emerald-400 p-3.5 rounded-xl font-mono text-xs overflow-x-auto my-2 border border-slate-800">
-                        <pre>{code}</pre>
-                      </div>
-                    );
-                  }
-                  return (
-                    <p key={pIdx} className="text-slate-700 leading-relaxed">
-                      {paragraph}
-                    </p>
-                  );
-                })}
+              <div className="space-y-1 font-sans">
+                {renderArticleBody(selectedArticle.content)}
               </div>
 
               {/* Helpfulness Feedback Box */}
