@@ -377,6 +377,30 @@ Mở trình duyệt truy cập ngay tại: **`http://localhost:3000`**
 Tại màn hình đăng nhập ([`https://helpdesk.dshinee.site/login`](https://helpdesk.dshinee.site/login)), hệ thống tích hợp sẵn **bộ nút chọn vai trò nhanh** để kiểm thử ngay lập tức mà không cần gõ mật khẩu:
 
 | Vai trò Kiểm Thử | Tên Đăng Nhập | Mật Khẩu | Phân Hệ Sẽ Mở Ra |
+---
+
+## 11. Tối Ưu Hóa Trải Nghiệm Thiết Bị Di Động & Kiểm Soát Nhiệt Năng (Mobile UI/UX & Thermal Optimization)
+
+Hệ thống được thiết kế và tối ưu chuyên sâu theo triết lý **Mobile-First Responsive**, giải quyết triệt để vấn đề giật lag (jank/stutter) và hiện tượng máy nóng, tụt pin thường gặp trên các ứng dụng nền Web phức tạp:
+
+### 1. Kiểm Soát Nhiệt Năng & Tiết Kiệm Pin (Thermal & Battery Management)
+- **Tắt bỏ hiệu ứng tính toán đắt đỏ (Backdrop Filter Bypass)**: Các thuộc tính CSS `backdrop-filter: blur(...)` và bóng đổ đa tầng (box-shadow) tiêu tốn năng lượng GPU rất lớn khi cuộn trang trên iOS Safari và Android WebView. Trên màn hình di động (`max-width: 768px`), hệ thống tự động vô hiệu hóa `backdrop-filter` và chuyển sang màu nền đặc đồng nhất (`background-color: rgb(15 23 42 / 0.95)`), duy trì ổn định tốc độ quét 60fps - 120fps mà không làm tăng nhiệt độ vi xử lý.
+- **Tăng tốc phần cứng (Hardware Acceleration)**: Tận dụng GPU Compositing thông qua `will-change: transform`, `transform: translateZ(0)` trên các thanh điều hướng nổi và Drawer menu.
+- **Khử độ trễ cảm ứng & Zoom ngoài ý muốn**: Cấu hình `touch-action: manipulation` loại bỏ độ trễ 300ms khi chạm trên Safari di động; chuẩn hóa kích thước ô nhập liệu `font-size: 16px` để ngăn trình duyệt tự động zoom lệch khung nhìn.
+
+### 2. Thiết Kế Công Thái Học Cho Ngón Tay Cái (Thumb-Friendly Ergonomics)
+- **Thanh Điều Hướng Đáy Màn Hình (Mobile Bottom Navigation Bar)**: Phân hệ Cổng Dịch Vụ Khách Hàng trang bị thanh điều hướng cố định sát đáy với 5 vị trí truy cập tức thì: *Trang Chủ*, *Phiếu Của Tôi*, *Nút Nổi Tạo Mới*, *Hỏi Đáp*, *Đăng Xuất*.
+- **Ngăn Kéo Điều Khiển Slide-Over (Responsive Admin Drawer)**: Phân hệ Quản trị viên tích hợp nút Menu mở thanh công cụ bên hông dạng trượt mượt mà kèm lớp màn phủ mờ (Backdrop Overlay), tự động thu gọn khi người dùng chọn mục hoặc chuyển trang.
+- **Cửa Sổ Hỗ Trợ Dạng Bảng Nổi (Mobile Bottom-Sheet Chatbot)**: Widget Trợ lý kỹ thuật số tự co giãn thành dạng bảng trượt gắn sát đáy, tránh che khuất thanh công cụ và tạo không gian soạn thảo rộng rãi cho bàn phím ảo.
+- **Hỗ trợ Safe Area (Tai thỏ & Thanh vuốt Home)**: Tự động tính toán khoảng đệm `env(safe-area-inset-bottom)` và `env(safe-area-inset-top)` cho các dòng máy iPhone hiện đại.
+
+---
+
+## 12. Danh Sách Tài Khoản Thử Nghiệm
+
+Hệ thống đã nạp sẵn dữ liệu mẫu phục vụ kiểm thử và đánh giá đầy đủ các phân hệ:
+
+| Vai Trò Phân Quyền | Tên Đăng Nhập | Mật Khẩu | Phân Hệ Được Phép Truy Cập |
 | :--- | :---: | :---: | :--- |
 | **Người Dùng / Khách** | `customer` | `password123` | **Cổng Dịch Vụ Khách Hàng (`/portal`)** |
 | **Kỹ Thuật Viên IT** | `agent` | `password123` | **Admin Console (`/dashboard`, xem & xử lý phiếu)** |
@@ -385,11 +409,17 @@ Tại màn hình đăng nhập ([`https://helpdesk.dshinee.site/login`](https://
 
 ---
 
-## 14. Chính Sách Cập Nhật & Nhật Ký Phiên Bản (Changelog)
+## 13. Chính Sách Cập Nhật & Nhật Ký Phiên Bản (Changelog)
 
 > **QUY TẮC BẮT BUỘC CỦA DỰ ÁN**: Mỗi khi mã nguồn hoặc tính năng được cải tiến, bổ sung hay chỉnh sửa, tệp `README.md` này **bắt buộc phải được cập nhật đồng thời** để phản ánh chính xác nhất hiện trạng kỹ thuật của hệ thống.
 
 ### Lịch Sử Phiên Bản (Release History):
+* **v2.5.0 (2026-09-27)**:
+  - Tối ưu hóa toàn diện giao diện di động (Mobile Responsive UI/UX).
+  - Tích hợp thanh điều hướng đáy di động (Mobile Bottom Navigation Bar) cho phân hệ Customer Portal.
+  - Tích hợp Slide-Over Drawer cho Sidebar phân hệ Admin Console kèm cơ chế tự đóng khi chuyển trang.
+  - Tối ưu hóa GPU & nhiệt độ thiết bị: Loại bỏ `backdrop-filter` đắt đỏ trên di động, khử giật khung hình, chống zoom ngoài ý muốn trên iOS.
+  - Tối ưu hóa cửa sổ Trợ lý ảo AI Chatbot dạng Bottom-Sheet linh hoạt trên màn hình nhỏ.
 * **v2.4.0 (2026-09-27)**:
   - Triển khai thành công hệ thống lên máy chủ thực tế tại [`https://helpdesk.dshinee.site`](https://helpdesk.dshinee.site) tích hợp SSL HTTPS.
   - Tách biệt hoàn toàn 2 phân hệ giao diện: **Customer Portal** (`/portal`) và **Admin Console** (`/dashboard`).
@@ -411,3 +441,4 @@ Dự án được xây dựng phục vụ nghiên cứu và thực hiện học 
 ---
 
 © 2026 Design By [DShinee](https://zalo.me/0833685262) — All rights reserved.
+

@@ -7,11 +7,12 @@ import {
   User as UserIcon,
   ChevronDown,
   Shield,
+  Menu,
 } from 'lucide-react';
 import Breadcrumbs from './Breadcrumbs';
 import { useAuthStore } from '../../store/authStore';
 
-export default function Header() {
+export default function Header({ onOpenMobileSidebar }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -30,9 +31,16 @@ export default function Header() {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-20 px-6 flex items-center justify-between">
-      {/* Left: Breadcrumbs & Page Context */}
-      <div className="flex items-center space-x-4">
+    <header className="h-14 sm:h-16 bg-white border-b border-slate-200 sticky top-0 z-20 px-4 sm:px-6 flex items-center justify-between">
+      {/* Left: Mobile Menu Button & Breadcrumbs */}
+      <div className="flex items-center space-x-2 sm:space-x-4">
+        <button
+          onClick={onOpenMobileSidebar}
+          className="md:hidden p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+          title="Mở menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         <Breadcrumbs />
       </div>
 

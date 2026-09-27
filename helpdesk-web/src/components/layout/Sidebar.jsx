@@ -12,10 +12,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Headphones,
+  X,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen = false, onCloseMobile }) {
   const [collapsed, setCollapsed] = useState(false);
   const { user } = useAuthStore();
   const role = user?.role || 'CUSTOMER';
@@ -61,37 +62,51 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 relative border-r border-slate-800 ${
-        collapsed ? 'w-20' : 'w-64'
-      }`}
+      className={`bg-slate-900 text-slate-300 flex flex-col transition-all duration-300 border-r border-slate-800 ${
+        mobileOpen
+          ? 'fixed inset-y-0 left-0 w-64 z-50 shadow-2xl hardware-accelerated'
+          : 'hidden md:flex relative'
+      } ${collapsed ? 'md:w-20' : 'md:w-64'}`}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center justify-between px-5 border-b border-slate-800">
+      <div className="h-16 flex items-center justify-between px-5 border-b border-slate-800 flex-shrink-0">
         <div className="flex items-center space-x-3 overflow-hidden">
-          <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center text-white flex-shrink-0 shadow-md">
+          <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center text-white flex-shrink-0 shadow-xs">
             <Headphones className="w-5 h-5" />
           </div>
-          {!collapsed && (
+          {(!collapsed || mobileOpen) && (
             <div className="truncate">
               <span className="font-bold text-base text-white tracking-wide block">HelpDesk</span>
               <span className="text-[10px] text-slate-400 font-medium block">Enterprise Suite</span>
             </div>
           )}
         </div>
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800 transition-colors"
-          title={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
+
+        {/* Mobile Close Button */}
+        {mobileOpen ? (
+          <button
+            onClick={onCloseMobile}
+            className="md:hidden text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800"
+            title="Đóng menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        ) : (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="hidden md:block text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800 transition-colors"
+            title={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+          >
+            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+        )}
       </div>
 
       {/* Navigation Links */}
       <div className="flex-1 py-4 overflow-y-auto px-3 space-y-6">
         {navItems.map((group, idx) => (
           <div key={idx} className="space-y-1">
-            {!collapsed && (
+            {(!collapsed || mobileOpen) && (
               <p className="px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 {group.title}
               </p>
@@ -102,18 +117,19 @@ export default function Sidebar() {
                 <NavLink
                   key={item.path}
                   to={item.path}
+                  onClick={() => onCloseMobile && onCloseMobile()}
                   className={({ isActive }) =>
                     `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors ${
                       isActive
-                        ? 'bg-primary-600 text-white shadow-sm'
+                        ? 'bg-primary-600 text-white shadow-xs'
                         : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    } ${collapsed ? 'justify-center' : ''}`
+                    } ${collapsed && !mobileOpen ? 'justify-center' : ''}`
                   }
-                  title={collapsed ? item.label : undefined}
+                  title={collapsed && !mobileOpen ? item.label : undefined}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-                  {!collapsed && item.badge && (
+                  {(!collapsed || mobileOpen) && <span className="flex-1 truncate">{item.label}</span>}
+                  {(!collapsed || mobileOpen) && item.badge && (
                     <span className="bg-primary-500/30 text-primary-200 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                       {item.badge}
                     </span>
@@ -126,12 +142,12 @@ export default function Sidebar() {
       </div>
 
       {/* Current Agent Status Bar (if Agent/Manager) */}
-      {(role === 'AGENT' || role === 'MANAGER') && !collapsed && (
-        <div className="p-3 mx-3 mb-4 rounded-xl bg-slate-800/80 border border-slate-700/60">
+      {(role === 'AGENT' || role === 'MANAGER') && (!collapsed || mobileOpen) && (
+        <div className="p-3 mx-3 mb-4 rounded-xl bg-slate-800/80 border border-slate-700/60 flex-shrink-0">
           <div className="flex items-center justify-between text-xs mb-1">
             <span className="text-slate-400">Trạng thái ca trực:</span>
             <span className="inline-flex items-center text-emerald-400 text-[11px] font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5" />
               Sẵn sàng
             </span>
           </div>

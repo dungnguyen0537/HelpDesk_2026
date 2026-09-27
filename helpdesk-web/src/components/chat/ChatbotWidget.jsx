@@ -144,7 +144,7 @@ Vui lòng mô tả vấn đề kỹ thuật bạn đang gặp phải để đư�
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 font-sans">
+    <div className="fixed bottom-20 sm:bottom-6 right-3 sm:right-6 z-50 font-sans">
       {/* Floating Toggle Button */}
       {!isOpen && (
         <button
@@ -152,16 +152,16 @@ Vui lòng mô tả vấn đề kỹ thuật bạn đang gặp phải để đư�
             setIsOpen(true);
             setIsMinimized(false);
           }}
-          className="group relative flex items-center space-x-2.5 px-4 py-3 rounded-full bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all duration-200 cursor-pointer border border-slate-700 hover:shadow-2xl"
+          className="group relative flex items-center space-x-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all duration-200 cursor-pointer border border-slate-700 hover:shadow-2xl"
         >
           <div className="relative">
-            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-primary-400">
-              <Headphones className="w-4 h-4" />
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800 flex items-center justify-center text-primary-400">
+              <Headphones className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-900"></span>
           </div>
 
-          <div className="text-left">
+          <div className="text-left hidden xs:block sm:block">
             <span className="block text-xs font-semibold leading-tight text-white">
               Hỗ Trợ Kỹ Thuật
             </span>
@@ -177,8 +177,8 @@ Vui lòng mô tả vấn đề kỹ thuật bạn đang gặp phải để đư�
         <div
           className={`bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col transition-all duration-200 overflow-hidden ${
             isMinimized
-              ? 'w-80 h-14'
-              : 'w-[92vw] sm:w-[420px] h-[580px] max-h-[85vh]'
+              ? 'w-72 sm:w-80 h-14'
+              : 'fixed inset-x-2 bottom-20 top-auto sm:static sm:inset-auto w-auto sm:w-[420px] h-[78vh] sm:h-[580px] max-h-[82vh] z-50'
           }`}
         >
           {/* Header */}
