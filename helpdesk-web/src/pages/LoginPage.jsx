@@ -42,15 +42,27 @@ export default function LoginPage() {
         });
       } catch (err) {
         // Fallback demo mock if backend isn't booted yet
+        const roleMap = {
+          customer: { role: 'CUSTOMER', name: 'Nguyễn Văn An (Người Dùng / Khách Hàng)', dept: 'Phòng Marketing' },
+          agent: { role: 'AGENT', name: 'Trần Văn Bình (Kỹ Thuật Viên Hỗ Trợ)', dept: 'Tổ Hỗ Trợ Kỹ Thuật' },
+          manager: { role: 'MANAGER', name: 'Lê Thị Cúc (Điều Phối Viên / Quản Lý)', dept: 'Trung Tâm Dịch Vụ Service Desk' },
+          admin: { role: 'ADMIN', name: 'Quản Trị Viên Hệ Thống', dept: 'Bộ Phận IT Toàn Hệ Thống' },
+        };
+        const selected = roleMap[formData.usernameOrEmail.toLowerCase()] || {
+          role: 'CUSTOMER',
+          name: formData.usernameOrEmail,
+          dept: 'Người Dùng Doanh Nghiệp',
+        };
+
         response = {
           token: 'mock-jwt-token-helpdesk-enterprise-2026',
           user: {
             id: 1,
             username: formData.usernameOrEmail,
-            email: formData.usernameOrEmail.includes('@') ? formData.usernameOrEmail : `${formData.usernameOrEmail}@helpdesk.local`,
-            fullName: formData.usernameOrEmail === 'admin' ? 'Quản Trị Viên Hệ Thống' : 'Hỗ Trợ Viên Kỹ Thuật',
-            role: formData.usernameOrEmail === 'admin' ? 'ADMIN' : 'AGENT',
-            department: 'IT Operations',
+            email: formData.usernameOrEmail.includes('@') ? formData.usernameOrEmail : `${formData.usernameOrEmail}@company.com`,
+            fullName: selected.name,
+            role: selected.role,
+            department: selected.dept,
           },
         };
       }
@@ -146,17 +158,82 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Quick Demo Credentials */}
-          <div className="mt-6 pt-5 border-t border-slate-100 bg-slate-50 rounded-xl p-3 text-xs text-slate-600">
-            <p className="font-semibold text-slate-700 mb-1">Tài khoản trải nghiệm nhanh:</p>
-            <div className="flex justify-between items-center text-[11px]">
-              <span>Admin: <code>admin / password123</code></span>
+          {/* Quick Demo Credentials for all Roles */}
+          <div className="mt-6 pt-4 border-t border-slate-100 bg-slate-50/80 rounded-xl p-3.5 text-xs text-slate-600">
+            <p className="font-semibold text-slate-700 mb-2 text-center text-xs">
+              🎯 Chọn vai trò để trải nghiệm nhanh các phân hệ:
+            </p>
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setFormData({ usernameOrEmail: 'admin', password: 'password123', rememberMe: true })}
-                className="text-primary-600 hover:underline font-medium"
+                onClick={() => {
+                  setFormData({ usernameOrEmail: 'customer', password: 'password123', rememberMe: true });
+                }}
+                className={`p-2 rounded-lg border text-left transition-all ${
+                  formData.usernameOrEmail === 'customer'
+                    ? 'border-primary-500 bg-primary-50/70 text-primary-900 font-semibold shadow-xs'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                }`}
               >
-                Điền nhanh
+                <div className="font-medium text-[11px] flex items-center justify-between">
+                  <span>👤 Người dùng / Khách</span>
+                  <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded">User</span>
+                </div>
+                <div className="text-[10px] text-slate-500 truncate mt-0.5">Tạo & theo dõi ticket</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData({ usernameOrEmail: 'agent', password: 'password123', rememberMe: true });
+                }}
+                className={`p-2 rounded-lg border text-left transition-all ${
+                  formData.usernameOrEmail === 'agent'
+                    ? 'border-primary-500 bg-primary-50/70 text-primary-900 font-semibold shadow-xs'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="font-medium text-[11px] flex items-center justify-between">
+                  <span>🛠️ Kỹ thuật viên</span>
+                  <span className="text-[9px] bg-blue-100 text-blue-700 px-1 rounded">Agent</span>
+                </div>
+                <div className="text-[10px] text-slate-500 truncate mt-0.5">Xử lý sự cố kỹ thuật</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData({ usernameOrEmail: 'manager', password: 'password123', rememberMe: true });
+                }}
+                className={`p-2 rounded-lg border text-left transition-all ${
+                  formData.usernameOrEmail === 'manager'
+                    ? 'border-primary-500 bg-primary-50/70 text-primary-900 font-semibold shadow-xs'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="font-medium text-[11px] flex items-center justify-between">
+                  <span>📊 Quản lý / Dispatch</span>
+                  <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded">Manager</span>
+                </div>
+                <div className="text-[10px] text-slate-500 truncate mt-0.5">Điều phối & Báo cáo</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData({ usernameOrEmail: 'admin', password: 'password123', rememberMe: true });
+                }}
+                className={`p-2 rounded-lg border text-left transition-all ${
+                  formData.usernameOrEmail === 'admin'
+                    ? 'border-primary-500 bg-primary-50/70 text-primary-900 font-semibold shadow-xs'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="font-medium text-[11px] flex items-center justify-between">
+                  <span>⚙️ Quản trị viên</span>
+                  <span className="text-[9px] bg-purple-100 text-purple-700 px-1 rounded">Admin</span>
+                </div>
+                <div className="text-[10px] text-slate-500 truncate mt-0.5">Toàn quyền hệ thống</div>
               </button>
             </div>
           </div>
