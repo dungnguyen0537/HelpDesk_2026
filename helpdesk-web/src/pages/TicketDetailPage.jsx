@@ -11,63 +11,89 @@ import {
   AlertTriangle,
   History,
   ShieldAlert,
+  RotateCcw,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
+import { useTicketStore } from '../store/ticketStore';
+import { useAuthStore } from '../store/authStore';
+import { TICKET_STATUS, TICKET_PRIORITY } from '../utils/constants';
+import { formatDate } from '../utils/formatters';
+
+const TECHNICIAN_OPTIONS = [
+  { value: 'Lê Văn Cường', label: 'Lê Văn Cường (Senior Network)' },
+  { value: 'Trần Thị Bích', label: 'Trần Thị Bích (System Admin)' },
+  { value: 'Trần Văn Bình', label: 'Trần Văn Bình (Desktop Support)' },
+  { value: 'Phạm Thị Lan', label: 'Phạm Thị Lan (ERP Specialist)' },
+  { value: 'Lê Thị Cúc', label: 'Lê Thị Cúc (Quản Lý Dịch Vụ)' },
+  { value: 'Nguyễn Văn Hùng', label: 'Nguyễn Văn Hùng (Kỹ Thuật Viên IT)' },
+];
 
 export default function TicketDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const { tickets, updateTicketStatus, assignTicket, addComment } = useTicketStore();
+  const { user } = useAuthStore();
+
   const [activeCommentTab, setActiveCommentTab] = useState('PUBLIC'); // 'PUBLIC' or 'INTERNAL'
   const [commentText, setCommentText] = useState('');
-  const [ticketStatus, setTicketStatus] = useState('IN_PROGRESS');
-  const [assignee, setAssignee] = useState('Lê Văn Cường');
 
-  const [comments, setComments] = useState([
-    {
-      id: 1,
-      author: 'Nguyễn Thu Trang',
-      role: 'CUSTOMER',
-      time: '14:00 (2 giờ trước)',
-      content: 'Chào IT, hiện tại cả dãy phòng Marketing tầng 3 đều không thể truy cập mạng LAN nội bộ và máy in mạng.',
-      isInternal: false,
-    },
-    {
-      id: 2,
-      author: 'Lê Văn Cường',
-      role: 'AGENT',
-      time: '14:15 (1 giờ 45 phút trước)',
-      content: 'Ghi chú kỹ thuật: Đã kiểm tra cổng switch SW-FL03-01 có dấu hiệu loopback hoặc mất nguồn PoE.',
-      isInternal: true,
-    },
-    {
-      id: 3,
-      author: 'Lê Văn Cường',
-      role: 'AGENT',
-      time: '14:20 (1 giờ 40 phút trước)',
-      content: 'Chào chị Trang, đội kỹ thuật đang trực tiếp lên phòng máy tầng 3 kiểm tra thiết bị Switch. Dự kiến khắc phục trong 30 phút.',
-      isInternal: false,
-    },
-  ]);
+  // Find ticket from store by ID or fallback to first
+  const ticket = tickets.find((t) => t.id === id) || tickets[0];
+
+  if (!ticket) {
+    return (
+      <div className="max-w-2xl mx-auto py-16 text-center space-y-4">
+        <h2 className="text-xl font-bold text-slate-800">Không tìm thấy phiếu hỗ trợ</h2>
+        <p className="text-xs text-slate-500">Mã phiếu yêu cầu không tồn tại hoặc đã bị xóa.</p>
+        <Button variant="primary" onClick={() => navigate('/tickets')}>
+          Về danh sách phiếu
+        </Button>
+      </div>
+    );
+  }
+
+  const statusInfo = TICKET_STATUS[ticket.status] || {
+    label: ticket.status,
+    color: 'bg-slate-100 text-slate-700 border-slate-300',
+  };
+
+  const priorityInfo = TICKET_PRIORITY[ticket.priority] || {
+    label: ticket.priority,
+    color: 'text-slate-600 bg-slate-50 border-slate-200',
+  };
+
+  const handleStatusChange = (newStatus) => {
+    updateTicketStatus(ticket.id, newStatus);
+  };
+
+  const handleAssigneeChange = (newAssignee) => {
+    assignTicket(ticket.id, newAssignee);
+  };
 
   const handleSendComment = (e) => {
     e.preventDefault();
     if (!commentText.trim()) return;
 
-    const newComment = {
-      id: Date.now(),
-      author: 'Bạn (Quản Trị / Kỹ Thuật)',
-      role: 'AGENT',
-      time: 'Vừa xong',
-      content: commentText,
-      isInternal: activeCommentTab === 'INTERNAL',
-    };
+    const authorName = user ? `${user.fullName}` : 'Bạn (Quản Trị / Kỹ Thuật)';
+    const authorRole = user?.role || 'AGENT';
 
-    setComments([...comments, newComment]);
+    addComment(ticket.id, {
+      author: authorName,
+      role: authorRole,
+      content: commentText.trim(),
+      isInternal: activeCommentTab === 'INTERNAL',
+    });
+
     setCommentText('');
   };
+
+  const visibleComments = (ticket.comments || []).filter((cmt) => {
+    if (activeCommentTab === 'INTERNAL') return true; // Show all or internal
+    return !cmt.isInternal; // Public view hides internal comments
+  });
 
   return (
     <div className="space-y-6">
@@ -82,30 +108,55 @@ export default function TicketDetailPage() {
           </button>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="text-sm font-bold text-primary-600">{id || 'TIK-2026-0041'}</span>
-              <Badge variant="danger" dot>URGENT</Badge>
-              <Badge variant="warning">Đang xử lý</Badge>
+              <span className="text-sm font-bold text-primary-600">{ticket.id}</span>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${priorityInfo.color}`}
+              >
+                {priorityInfo.label}
+              </span>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${statusInfo.color}`}
+              >
+                {statusInfo.label}
+              </span>
             </div>
             <h1 className="text-lg md:text-xl font-bold text-slate-900 mt-0.5">
-              Mất kết nối Switch tầng 3 tòa nhà trung tâm
+              {ticket.title}
             </h1>
           </div>
         </div>
 
         {/* Quick Resolution Controls */}
         <div className="flex items-center space-x-2">
+          {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleStatusChange('RESOLVED')}
+              className="text-emerald-700 hover:bg-emerald-50 border-emerald-300"
+            >
+              <CheckCircle className="w-4 h-4 mr-1 text-emerald-600" />
+              Đánh dấu giải quyết
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleStatusChange('IN_PROGRESS')}
+              className="text-amber-700 hover:bg-amber-50 border-amber-300"
+            >
+              <RotateCcw className="w-4 h-4 mr-1 text-amber-600" />
+              Mở lại phiếu (Đang xử lý)
+            </Button>
+          )}
+
           <Button
-            variant="outline"
+            variant="danger"
             size="sm"
-            onClick={() => setTicketStatus('RESOLVED')}
-            className="text-emerald-700 hover:bg-emerald-50 border-emerald-300"
+            onClick={() => handleStatusChange('IN_PROGRESS')}
           >
-            <CheckCircle className="w-4 h-4 mr-1 text-emerald-600" />
-            Đánh dấu giải quyết
-          </Button>
-          <Button variant="danger" size="sm">
             <ShieldAlert className="w-4 h-4 mr-1" />
-            Báo cáo Leo thang
+            Tiếp nhận xử lý
           </Button>
         </div>
       </div>
@@ -116,19 +167,29 @@ export default function TicketDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Issue Content Card */}
           <Card title="Nội dung sự cố ban đầu">
-            <p className="text-xs md:text-sm text-slate-700 leading-relaxed">
-              Toàn bộ phòng Marketing tầng 3 mất mạng dây từ lúc 13h55. Đèn trên các cổng Switch nhấp nháy đỏ liên tục. 
-              Các máy trạm bị ngắt kết nối vào hệ thống ERP và không thể in tài liệu hợp đồng gấp gửi đối tác.
+            <p className="text-xs md:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+              {ticket.description || 'Không có mô tả chi tiết cho sự cố này.'}
             </p>
 
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <span className="text-xs font-semibold text-slate-600 block mb-2">Tệp đính kèm (1):</span>
-              <div className="inline-flex items-center space-x-2 p-2 rounded-lg border border-slate-200 bg-slate-50 text-xs">
-                <Paperclip className="w-3.5 h-3.5 text-slate-500" />
-                <span className="font-medium text-slate-700">switch_error_light.jpg</span>
-                <span className="text-slate-400">(1.4 MB)</span>
+            {ticket.attachments && ticket.attachments.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <span className="text-xs font-semibold text-slate-600 block mb-2">
+                  Tệp đính kèm ({ticket.attachments.length}):
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {ticket.attachments.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-flex items-center space-x-2 p-2 rounded-lg border border-slate-200 bg-slate-50 text-xs"
+                    >
+                      <Paperclip className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="font-medium text-slate-700">{file.name}</span>
+                      {file.size && <span className="text-slate-400">({file.size})</span>}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </Card>
 
           {/* Comment Stream */}
@@ -162,36 +223,42 @@ export default function TicketDetailPage() {
 
             {/* Conversation Feed */}
             <div className="p-5 space-y-4 max-h-[450px] overflow-y-auto">
-              {comments.map((cmt) => (
-                <div
-                  key={cmt.id}
-                  className={`p-3.5 rounded-xl border ${
-                    cmt.isInternal
-                      ? 'bg-amber-50/70 border-amber-200 text-amber-900'
-                      : 'bg-white border-slate-200 text-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center font-bold text-[10px] text-slate-700">
-                        {cmt.author.charAt(0)}
-                      </div>
-                      <span className="text-xs font-bold text-slate-900">{cmt.author}</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold">
-                        {cmt.role}
-                      </span>
-                      {cmt.isInternal && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-800 font-semibold flex items-center space-x-1">
-                          <Lock className="w-2.5 h-2.5 mr-0.5" />
-                          Nội bộ
+              {visibleComments.length > 0 ? (
+                visibleComments.map((cmt) => (
+                  <div
+                    key={cmt.id}
+                    className={`p-3.5 rounded-xl border ${
+                      cmt.isInternal
+                        ? 'bg-amber-50/70 border-amber-200 text-amber-900'
+                        : 'bg-white border-slate-200 text-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center font-bold text-[10px] text-slate-700">
+                          {cmt.author ? cmt.author.charAt(0) : 'U'}
+                        </div>
+                        <span className="text-xs font-bold text-slate-900">{cmt.author}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold">
+                          {cmt.role}
                         </span>
-                      )}
+                        {cmt.isInternal && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-800 font-semibold flex items-center space-x-1">
+                            <Lock className="w-2.5 h-2.5 mr-0.5" />
+                            Nội bộ
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400">{cmt.time}</span>
                     </div>
-                    <span className="text-[10px] text-slate-400">{cmt.time}</span>
+                    <p className="text-xs leading-relaxed whitespace-pre-line">{cmt.content}</p>
                   </div>
-                  <p className="text-xs leading-relaxed">{cmt.content}</p>
+                ))
+              ) : (
+                <div className="text-center py-6 text-slate-400 text-xs italic">
+                  Chưa có trao đổi nào trong mục này. Hãy gửi tin nhắn đầu tiên.
                 </div>
-              ))}
+              )}
             </div>
 
             {/* Reply Input Form */}
@@ -200,7 +267,7 @@ export default function TicketDetailPage() {
                 rows={3}
                 placeholder={
                   activeCommentTab === 'INTERNAL'
-                    ? 'Nhập ghi chú kỹ thuật bảo mật...'
+                    ? 'Nhập ghi chú kỹ thuật bảo mật (chỉ nhân viên IT đọc được)...'
                     : 'Gửi phản hồi cho khách hàng...'
                 }
                 value={commentText}
@@ -209,9 +276,15 @@ export default function TicketDetailPage() {
               />
               <div className="flex items-center justify-between mt-2.5">
                 <span className="text-[11px] text-slate-400">
-                  {activeCommentTab === 'INTERNAL' ? 'Ghi chú nội bộ (Khách hàng không nhìn thấy nội dung này)' : 'Tin nhắn công khai gửi đến email khách'}
+                  {activeCommentTab === 'INTERNAL'
+                    ? 'Ghi chú nội bộ (Khách hàng không nhìn thấy nội dung này)'
+                    : 'Tin nhắn công khai gửi đến khách hàng'}
                 </span>
-                <Button type="submit" size="sm" variant={activeCommentTab === 'INTERNAL' ? 'secondary' : 'primary'}>
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant={activeCommentTab === 'INTERNAL' ? 'secondary' : 'primary'}
+                >
                   <Send className="w-3.5 h-3.5 mr-1" />
                   Gửi phản hồi
                 </Button>
@@ -228,9 +301,9 @@ export default function TicketDetailPage() {
               <div>
                 <label className="text-slate-500 block mb-1">Trạng thái phiếu:</label>
                 <select
-                  value={ticketStatus}
-                  onChange={(e) => setTicketStatus(e.target.value)}
-                  className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white font-medium text-slate-800"
+                  value={ticket.status}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
                   <option value="NEW">Mới tạo (NEW)</option>
                   <option value="ASSIGNED">Đã gán (ASSIGNED)</option>
@@ -244,21 +317,45 @@ export default function TicketDetailPage() {
               <div>
                 <label className="text-slate-500 block mb-1">Kỹ thuật viên phụ trách:</label>
                 <select
-                  value={assignee}
-                  onChange={(e) => setAssignee(e.target.value)}
-                  className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white font-medium text-slate-800"
+                  value={ticket.assignee || ''}
+                  onChange={(e) => handleAssigneeChange(e.target.value)}
+                  className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
-                  <option value="Lê Văn Cường">Lê Văn Cường (Senior Network)</option>
-                  <option value="Trần Thị Bích">Trần Thị Bích (System Admin)</option>
-                  <option value="Nguyễn Văn Hùng">Nguyễn Văn Hùng (Desktop Support)</option>
+                  <option value="">-- Chưa phân công --</option>
+                  {TECHNICIAN_OPTIONS.map((tech) => (
+                    <option key={tech.value} value={tech.value}>
+                      {tech.label}
+                    </option>
+                  ))}
+                  {ticket.assignee &&
+                    !TECHNICIAN_OPTIONS.some((t) => t.value === ticket.assignee) && (
+                      <option value={ticket.assignee}>{ticket.assignee}</option>
+                    )}
                 </select>
               </div>
 
               <div className="pt-2 border-t border-slate-100">
+                <span className="text-slate-500 block">Phòng ban phụ trách:</span>
+                <span className="font-semibold text-slate-800 block mt-0.5">
+                  {ticket.department || 'IT Operations & Mạng'}
+                </span>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
                 <span className="text-slate-500 block">Người yêu cầu:</span>
-                <span className="font-semibold text-slate-800 block mt-0.5">Nguyễn Thu Trang</span>
-                <span className="text-[11px] text-slate-400 block">Phòng Marketing & Truyền thông</span>
-                <span className="text-[11px] text-slate-400 block">Email: trang.nt@company.com</span>
+                <span className="font-semibold text-slate-800 block mt-0.5">{ticket.creator}</span>
+                {ticket.creatorEmail && (
+                  <span className="text-[11px] text-slate-400 block">Email: {ticket.creatorEmail}</span>
+                )}
+                {ticket.location && (
+                  <span className="text-[11px] text-slate-400 block">Vị trí: {ticket.location}</span>
+                )}
+                {ticket.phone && (
+                  <span className="text-[11px] text-slate-400 block">SĐT: {ticket.phone}</span>
+                )}
+                <span className="text-[11px] text-slate-400 block mt-1">
+                  Khởi tạo: {formatDate(ticket.createdAt)}
+                </span>
               </div>
             </div>
           </Card>
@@ -271,18 +368,53 @@ export default function TicketDetailPage() {
                   <span>Phản hồi lần đầu (MTTA):</span>
                   <span>ĐẠT CHỈ TIÊU</span>
                 </div>
-                <p className="text-[11px] text-emerald-700">Phản hồi sau 15 phút (Quy định: 30 phút)</p>
+                <p className="text-[11px] text-emerald-700">Tiếp nhận xử lý đúng quy định cam kết dịch vụ</p>
               </div>
 
-              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
-                <div className="flex items-center justify-between text-amber-800 font-semibold mb-1">
-                  <span>Thời hạn xử lý (MTTR):</span>
-                  <span className="text-rose-600 font-bold">CÒN 14 PHÚT</span>
+              <div
+                className={`p-3 rounded-lg border ${
+                  ticket.isBreached
+                    ? 'bg-rose-50 border-rose-200'
+                    : ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'
+                    ? 'bg-emerald-50 border-emerald-200'
+                    : 'bg-amber-50 border-amber-200'
+                }`}
+              >
+                <div className="flex items-center justify-between font-semibold mb-1">
+                  <span
+                    className={
+                      ticket.isBreached
+                        ? 'text-rose-800'
+                        : ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'
+                        ? 'text-emerald-800'
+                        : 'text-amber-800'
+                    }
+                  >
+                    Thời hạn xử lý (MTTR):
+                  </span>
+                  <span
+                    className={`font-bold ${
+                      ticket.isBreached
+                        ? 'text-rose-600'
+                        : ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'
+                        ? 'text-emerald-700'
+                        : 'text-amber-700'
+                    }`}
+                  >
+                    {ticket.slaResolution || ticket.slaRemaining || 'Đạt SLA'}
+                  </span>
                 </div>
-                <p className="text-[11px] text-amber-700">Hạn chót: 16:00:00 hôm nay (2 giờ kể từ khi mở)</p>
-                <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2 overflow-hidden">
-                  <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: '85%' }}></div>
-                </div>
+                <p
+                  className={`text-[11px] ${
+                    ticket.isBreached
+                      ? 'text-rose-600'
+                      : ticket.status === 'RESOLVED' || ticket.status === 'CLOSED'
+                      ? 'text-emerald-700'
+                      : 'text-amber-700'
+                  }`}
+                >
+                  {ticket.slaNotice || 'Cam kết SLA hệ thống vận hành'}
+                </p>
               </div>
             </div>
           </Card>
@@ -290,24 +422,29 @@ export default function TicketDetailPage() {
           {/* Timeline History */}
           <Card title="Nhật Ký Kiểm Toán (Audit)">
             <div className="space-y-3 text-[11px] text-slate-600">
-              <div className="flex items-start space-x-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 flex-shrink-0" />
-                <div>
-                  <span className="font-semibold text-slate-800">14:00</span> - Tạo phiếu hỗ trợ bởi Nguyễn Thu Trang
-                </div>
-              </div>
-              <div className="flex items-start space-x-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-1.5 flex-shrink-0" />
-                <div>
-                  <span className="font-semibold text-slate-800">14:05</span> - Hệ thống gán tự động cho Lê Văn Cường
-                </div>
-              </div>
-              <div className="flex items-start space-x-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                <div>
-                  <span className="font-semibold text-slate-800">14:15</span> - Chuyển trạng thái sang IN_PROGRESS
-                </div>
-              </div>
+              {ticket.history && ticket.history.length > 0 ? (
+                ticket.history.map((h, idx) => (
+                  <div key={h.id || idx} className="flex items-start space-x-2">
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
+                        h.type === 'status'
+                          ? 'bg-amber-500'
+                          : h.type === 'assign'
+                          ? 'bg-primary-500'
+                          : h.type === 'comment'
+                          ? 'bg-sky-500'
+                          : 'bg-slate-400'
+                      }`}
+                    />
+                    <div>
+                      <span className="font-semibold text-slate-800">{h.time || h.date}</span> -{' '}
+                      {h.content}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-slate-400 italic">Chưa có nhật ký ghi nhận</div>
+              )}
             </div>
           </Card>
         </div>

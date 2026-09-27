@@ -13,6 +13,7 @@ import {
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
+import { useTicketStore } from '../store/ticketStore';
 import {
   AreaChart,
   Area,
@@ -29,6 +30,21 @@ import {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const tickets = useTicketStore((state) => state.tickets);
+
+  // Dynamic KPI Metrics
+  const totalTickets = tickets.length;
+  const inProgressTickets = tickets.filter(
+    (t) => t.status === 'IN_PROGRESS' || t.status === 'ASSIGNED'
+  ).length;
+  const pendingTickets = tickets.filter((t) => t.status === 'PENDING').length;
+  const resolvedTickets = tickets.filter(
+    (t) => t.status === 'RESOLVED' || t.status === 'CLOSED'
+  ).length;
+  const urgentTicketsCount = tickets.filter(
+    (t) => (t.priority === 'URGENT' || t.isBreached) && t.status !== 'RESOLVED' && t.status !== 'CLOSED'
+  ).length;
+  const resolutionRate = totalTickets ? Math.round((resolvedTickets / totalTickets) * 100) : 100;
 
   // Mock Trend Data
   const trendData = [
@@ -38,50 +54,32 @@ export default function DashboardPage() {
     { day: 'T5', created: 38, resolved: 42 },
     { day: 'T6', created: 52, resolved: 48 },
     { day: 'T7', created: 18, resolved: 22 },
-    { day: 'CN', created: 12, resolved: 14 },
+    { day: 'CN', created: totalTickets > 0 ? totalTickets : 12, resolved: resolvedTickets > 0 ? resolvedTickets : 14 },
   ];
 
-  // Category Distribution
-  const categoryData = [
-    { name: 'Mạng & Kết nối', value: 42, color: '#3b82f6' },
-    { name: 'Phần mềm ERP/Office', value: 35, color: '#10b981' },
-    { name: 'Phần cứng & Ngoại vi', value: 20, color: '#f59e0b' },
-    { name: 'Tài khoản & Phân quyền', value: 15, color: '#8b5cf6' },
-  ];
+  // Dynamic Category Distribution
+  const categoryPalette = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+  const categoryCounts = tickets.reduce((acc, t) => {
+    const cat = t.category || 'Khác';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {});
 
-  // Urgent tickets list
-  const urgentTickets = [
-    {
-      id: 'TIK-2026-0041',
-      title: 'Mất kết nối Switch tầng 3 tòa nhà trung tâm',
-      category: 'Mạng & LAN',
-      priority: 'URGENT',
-      status: 'IN_PROGRESS',
-      assignee: 'Lê Văn Cường',
-      slaRemaining: 'Còn 14 phút',
-      isBreached: false,
-    },
-    {
-      id: 'TIK-2026-0039',
-      title: 'Lỗi phân quyền hệ thống thanh toán hóa đơn ERP',
-      category: 'Phần mềm',
-      priority: 'HIGH',
-      status: 'ASSIGNED',
-      assignee: 'Trần Thị Bích',
-      slaRemaining: 'Còn 42 phút',
-      isBreached: false,
-    },
-    {
-      id: 'TIK-2026-0035',
-      title: 'Máy in hóa đơn xuất khẩu kẹt giấy không in được',
-      category: 'Phần cứng',
-      priority: 'MEDIUM',
-      status: 'NEW',
-      assignee: 'Chưa gán',
-      slaRemaining: 'Quá hạn 12 phút',
-      isBreached: true,
-    },
-  ];
+  const categoryData = Object.keys(categoryCounts).map((catName, idx) => ({
+    name: catName,
+    value: categoryCounts[catName],
+    color: categoryPalette[idx % categoryPalette.length],
+  }));
+
+  // Urgent tickets list from store (tickets needing immediate action)
+  const urgentTickets = tickets
+    .filter(
+      (t) =>
+        (t.priority === 'URGENT' || t.priority === 'HIGH' || t.isBreached) &&
+        t.status !== 'RESOLVED' &&
+        t.status !== 'CLOSED'
+    )
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -119,44 +117,44 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Tổng Phiếu Tuần</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase">Tổng Số Phiếu</span>
             <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Ticket className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-slate-800">219</span>
+            <span className="text-2xl font-bold text-slate-800">{totalTickets}</span>
             <div className="flex items-center text-xs text-emerald-600 font-medium mt-1">
               <TrendingUp className="w-3.5 h-3.5 mr-1" />
-              <span>+14.5% so với tuần trước</span>
+              <span>Đồng bộ từ hệ thống</span>
             </div>
           </div>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Đang Xử Lý</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase">Phiếu Đang Xử Lý</span>
             <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Clock className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-slate-800">18</span>
+            <span className="text-2xl font-bold text-slate-800">{inProgressTickets}</span>
             <div className="flex items-center text-xs text-slate-500 font-medium mt-1">
-              <span>5 phiếu chờ khách phản hồi</span>
+              <span>{pendingTickets} phiếu chờ khách phản hồi</span>
             </div>
           </div>
         </Card>
 
         <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Cảnh Báo SLA</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase">Phiếu Khẩn Cấp / SLA</span>
             <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
               <ShieldAlert className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-rose-600">3</span>
+            <span className="text-2xl font-bold text-rose-600">{urgentTicketsCount}</span>
             <div className="flex items-center text-xs text-rose-600 font-medium mt-1">
               <AlertTriangle className="w-3.5 h-3.5 mr-1" />
               <span>Cần phân công can thiệp ngay</span>
@@ -166,15 +164,15 @@ export default function DashboardPage() {
 
         <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Hài Lòng CSAT</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase">Phiếu Hoàn Thành</span>
             <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-slate-800">98.4%</span>
+            <span className="text-2xl font-bold text-emerald-600">{resolvedTickets}</span>
             <div className="flex items-center text-xs text-emerald-600 font-medium mt-1">
-              <span>Đạt tiêu chuẩn chất lượng</span>
+              <span>Tỷ lệ hoàn thành: {resolutionRate}%</span>
             </div>
           </div>
         </Card>
@@ -306,37 +304,51 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {urgentTickets.map((tik) => (
-                <tr key={tik.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-3 font-semibold text-primary-600">{tik.id}</td>
-                  <td className="py-3 px-3 font-medium text-slate-800 max-w-xs truncate">{tik.title}</td>
-                  <td className="py-3 px-3">{tik.category}</td>
-                  <td className="py-3 px-3">
-                    <Badge variant={tik.priority === 'URGENT' ? 'danger' : 'warning'} dot>
-                      {tik.priority}
-                    </Badge>
-                  </td>
-                  <td className="py-3 px-3">{tik.assignee}</td>
-                  <td className="py-3 px-3">
-                    <span
-                      className={`font-semibold ${
-                        tik.isBreached ? 'text-rose-600' : 'text-amber-600'
-                      }`}
-                    >
-                      {tik.slaRemaining}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3 text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`/tickets/${tik.id}`)}
-                    >
-                      Chi tiết
-                    </Button>
+              {urgentTickets.length > 0 ? (
+                urgentTickets.map((tik) => (
+                  <tr key={tik.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3 px-3 font-semibold text-primary-600">{tik.id}</td>
+                    <td className="py-3 px-3 font-medium text-slate-800 max-w-xs truncate">{tik.title}</td>
+                    <td className="py-3 px-3">{tik.category}</td>
+                    <td className="py-3 px-3">
+                      <Badge variant={tik.priority === 'URGENT' ? 'danger' : 'warning'} dot>
+                        {tik.priority}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-3">
+                      {tik.assignee ? (
+                        <span className="text-slate-800">{tik.assignee}</span>
+                      ) : (
+                        <span className="text-slate-400 italic">Chưa gán</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span
+                        className={`font-semibold ${
+                          tik.isBreached ? 'text-rose-600' : 'text-amber-600'
+                        }`}
+                      >
+                        {tik.slaRemaining || tik.slaResolution || 'Còn hạn'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/tickets/${tik.id}`)}
+                      >
+                        Chi tiết
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-slate-400 italic">
+                    Không có phiếu khẩn cấp hoặc vi phạm SLA nào cần xử lý.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

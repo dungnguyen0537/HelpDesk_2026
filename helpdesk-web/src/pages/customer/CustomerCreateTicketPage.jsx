@@ -18,6 +18,8 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import Button from '../../components/common/Button';
+import { useTicketStore } from '../../store/ticketStore';
+import { useAuthStore } from '../../store/authStore';
 
 export default function CustomerCreateTicketPage() {
   const navigate = useNavigate();
@@ -65,6 +67,9 @@ export default function CustomerCreateTicketPage() {
     },
   ];
 
+  const { createTicket } = useTicketStore();
+  const { user } = useAuthStore();
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setAttachments((prev) => [...prev, ...files]);
@@ -78,15 +83,39 @@ export default function CustomerCreateTicketPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const selectedCategoryObj = categories.find((c) => c.id === formData.category);
+    const categoryName = selectedCategoryObj ? selectedCategoryObj.name.split(' (')[0] : 'Hỗ trợ kỹ thuật';
+
+    const uploadedAttachments = attachments.map((f) => ({
+      name: f.name,
+      size: `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
+    }));
+
+    const creatorName = user ? `${user.fullName} (${user.department || 'Khách hàng'})` : 'Nguyễn Thu Trang (Marketing)';
+    const creatorEmail = user?.email || 'customer@company.com';
+
+    const newTicket = createTicket({
+      title: formData.title,
+      description: formData.description,
+      category: categoryName,
+      department: 'IT Operations & Mạng',
+      priority: formData.urgency,
+      urgency: formData.urgency,
+      location: formData.location,
+      phone: formData.phone,
+      creator: creatorName,
+      creatorEmail: creatorEmail,
+      attachments: uploadedAttachments,
+    });
+
     setTimeout(() => {
       setIsSubmitting(false);
-      const generatedId = `TK-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
       setCreatedTicket({
-        id: generatedId,
-        title: formData.title,
-        eta: formData.urgency === 'HIGH' ? '15 - 30 phút' : '2 - 4 giờ làm việc',
+        id: newTicket.id,
+        title: newTicket.title,
+        eta: newTicket.eta || (formData.urgency === 'HIGH' ? '15 - 30 phút' : '2 - 4 giờ làm việc'),
       });
-    }, 800);
+    }, 600);
   };
 
   if (createdTicket) {

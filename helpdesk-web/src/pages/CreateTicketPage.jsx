@@ -12,6 +12,8 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { ticketApi } from '../api/ticketApi';
+import { useTicketStore } from '../store/ticketStore';
+import { useAuthStore } from '../store/authStore';
 
 export default function CreateTicketPage() {
   const navigate = useNavigate();
@@ -30,6 +32,9 @@ export default function CreateTicketPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const { createTicket } = useTicketStore();
+  const { user } = useAuthStore();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,10 +56,24 @@ export default function CreateTicketPage() {
         // Fallback demo mock
       }
 
+      const creatorName = user ? `${user.fullName} (${user.department || 'Nhân sự'})` : 'Quản trị viên';
+      const creatorEmail = user?.email || 'admin@company.com';
+
+      createTicket({
+        title: formData.title,
+        departmentId: formData.departmentId,
+        categoryId: formData.categoryId,
+        priorityId: formData.priorityId,
+        description: formData.description,
+        creator: creatorName,
+        creatorEmail: creatorEmail,
+        attachments: attachments,
+      });
+
       setSuccess(true);
       setTimeout(() => {
         navigate('/tickets');
-      }, 1200);
+      }, 1000);
     } catch (err) {
       console.error(err);
     } finally {

@@ -25,7 +25,6 @@ public class JwtTokenProvider {
     private Key getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes();
         if (keyBytes.length < 32) {
-            // Pad or derive key if length is insufficient
             byte[] padded = new byte[32];
             System.arraycopy(keyBytes, 0, padded, 0, Math.min(keyBytes.length, 32));
             return Keys.hmacShaKeyFor(padded);
@@ -35,11 +34,29 @@ public class JwtTokenProvider {
 
     public String generateToken(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
+        return generateTokenFromUsername(userPrincipal.getUsername());
+    }
+
+    public String generateTokenFromUsername(String username) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
         return Jwts.builder()
-                .setSubject(userPrincipal.getUsername())
+                .setSubject(username)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public String generateRefreshToken(String username) {
+        Date now = new Date();
+        // Refresh token default 7 days
+        Date expiryDate = new Date(now.getTime() + (jwtExpirationInMs * 7));
+
+        return Jwts.builder()
+                .setSubject(username)
+                .claim("type", "refresh")
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -61,8 +78,11 @@ public class JwtTokenProvider {
             Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(authToken);
             return true;
         } catch (JwtException | IllegalArgumentException ex) {
-            // Token invalid or expired
             return false;
         }
+    }
+
+    public long getExpirationInMs() {
+        return jwtExpirationInMs;
     }
 }

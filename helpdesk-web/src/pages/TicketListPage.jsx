@@ -14,85 +14,33 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
 import { TICKET_STATUS, TICKET_PRIORITY } from '../utils/constants';
+import { useTicketStore } from '../store/ticketStore';
 
 export default function TicketListPage() {
   const navigate = useNavigate();
+  const tickets = useTicketStore((state) => state.tickets);
 
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedPriority, setSelectedPriority] = useState('ALL');
 
-  // Sample Ticket Dataset
-  const sampleTickets = [
-    {
-      id: 'TIK-2026-0041',
-      title: 'Mất kết nối Switch tầng 3 tòa nhà trung tâm',
-      department: 'IT Operations',
-      creator: 'Nguyễn Thu Trang (Marketing)',
-      assignee: 'Lê Văn Cường',
-      status: 'IN_PROGRESS',
-      priority: 'URGENT',
-      createdAt: '2026-09-27T08:30:00Z',
-      slaResolution: 'Còn 14 phút',
-      isBreached: false,
-    },
-    {
-      id: 'TIK-2026-0040',
-      title: 'Yêu cầu cấp tài khoản phần mềm kế toán MISA',
-      department: 'IT Operations',
-      creator: 'Trần Văn Mạnh (Kế toán)',
-      assignee: 'Phạm Thị Lan',
-      status: 'RESOLVED',
-      priority: 'MEDIUM',
-      createdAt: '2026-09-26T14:15:00Z',
-      slaResolution: 'Đạt SLA',
-      isBreached: false,
-    },
-    {
-      id: 'TIK-2026-0039',
-      title: 'Lỗi phân quyền hệ thống thanh toán hóa đơn ERP',
-      department: 'Phát triển Sản phẩm',
-      creator: 'Đặng Tuấn Anh (Tài chính)',
-      assignee: 'Trần Thị Bích',
-      status: 'ASSIGNED',
-      priority: 'HIGH',
-      createdAt: '2026-09-27T07:45:00Z',
-      slaResolution: 'Còn 42 phút',
-      isBreached: false,
-    },
-    {
-      id: 'TIK-2026-0038',
-      title: 'Không thể in tài liệu từ máy in tầng 2 qua Wifi',
-      department: 'IT Operations',
-      creator: 'Lê Mai Anh (Nhân sự)',
-      assignee: null,
-      status: 'NEW',
-      priority: 'MEDIUM',
-      createdAt: '2026-09-27T09:10:00Z',
-      slaResolution: 'Còn 1 giờ 15 phút',
-      isBreached: false,
-    },
-    {
-      id: 'TIK-2026-0035',
-      title: 'Máy in hóa đơn xuất khẩu kẹt giấy không in được',
-      department: 'IT Operations',
-      creator: 'Hoàng Quốc Việt (Kho vận)',
-      assignee: null,
-      status: 'NEW',
-      priority: 'URGENT',
-      createdAt: '2026-09-26T16:00:00Z',
-      slaResolution: 'Quá hạn 2 giờ',
-      isBreached: true,
-    },
-  ];
+  // Dynamic tab counts
+  const tabCounts = {
+    ALL: tickets.length,
+    UNASSIGNED: tickets.filter((t) => !t.assignee).length,
+    BREACHED: tickets.filter((t) => t.isBreached).length,
+    RESOLVED: tickets.filter((t) => t.status === 'RESOLVED' || t.status === 'CLOSED').length,
+  };
 
   // Filtering
-  const filteredTickets = sampleTickets.filter((t) => {
+  const filteredTickets = tickets.filter((t) => {
     const matchSearch =
       t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.creator.toLowerCase().includes(searchQuery.toLowerCase());
+      (t.creator && t.creator.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (t.department && t.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (t.assignee && t.assignee.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchTab =
       activeTab === 'ALL'
@@ -102,7 +50,7 @@ export default function TicketListPage() {
         : activeTab === 'BREACHED'
         ? t.isBreached
         : activeTab === 'RESOLVED'
-        ? t.status === 'RESOLVED'
+        ? t.status === 'RESOLVED' || t.status === 'CLOSED'
         : true;
 
     const matchStatus = selectedStatus === 'ALL' || t.status === selectedStatus;
@@ -139,10 +87,10 @@ export default function TicketListPage() {
       {/* Tabs Filter */}
       <div className="flex space-x-1 border-b border-slate-200">
         {[
-          { key: 'ALL', label: 'Tất cả phiếu', count: 142 },
-          { key: 'UNASSIGNED', label: 'Chưa phân công', count: 8 },
-          { key: 'BREACHED', label: 'Vi phạm SLA', count: 3 },
-          { key: 'RESOLVED', label: 'Đã giải quyết', count: 112 },
+          { key: 'ALL', label: 'Tất cả phiếu', count: tabCounts.ALL },
+          { key: 'UNASSIGNED', label: 'Chưa phân công', count: tabCounts.UNASSIGNED },
+          { key: 'BREACHED', label: 'Vi phạm SLA', count: tabCounts.BREACHED },
+          { key: 'RESOLVED', label: 'Đã giải quyết', count: tabCounts.RESOLVED },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -312,7 +260,7 @@ export default function TicketListPage() {
 
         {/* Pagination Footer */}
         <div className="p-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span>Hiển thị 1 - {filteredTickets.length} trong tổng số 142 phiếu</span>
+          <span>Hiển thị 1 - {filteredTickets.length} trong tổng số {tickets.length} phiếu</span>
           <div className="flex items-center space-x-1">
             <button className="px-3 py-1 border border-slate-200 rounded hover:bg-slate-50">Trước</button>
             <button className="px-3 py-1 bg-primary-600 text-white rounded font-medium">1</button>

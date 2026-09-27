@@ -414,6 +414,19 @@ Hệ thống đã nạp sẵn dữ liệu mẫu phục vụ kiểm thử và đ�
 > **QUY TẮC BẮT BUỘC CỦA DỰ ÁN**: Mỗi khi mã nguồn hoặc tính năng được cải tiến, bổ sung hay chỉnh sửa, tệp `README.md` này **bắt buộc phải được cập nhật đồng thời** để phản ánh chính xác nhất hiện trạng kỹ thuật của hệ thống.
 
 ### Lịch Sử Phiên Bản (Release History):
+* **v2.6.0 (2026-09-27)**:
+  - **Hoàn thiện trọn vẹn Tầng Nghiệp vụ & API Backend (`helpdesk-api`)**:
+    + Xây dựng đầy đủ 8 Spring Data JPA Repositories: `UserRepository`, `TicketRepository`, `DepartmentRepository`, `CategoryRepository`, `PriorityRepository`, `SlaPolicyRepository`, `TicketCommentRepository`, `TicketHistoryRepository`, `AgentProfileRepository`.
+    + Xây dựng 4 Services & ServiceImpls cốt lõi (`AuthService`, `TicketService`, `UserService`, `DashboardService`) kèm DTO Mapper chuyển đổi dữ liệu.
+    + Xây dựng 4 RESTful Controllers: `AuthController` (`/api/auth`), `TicketController` (`/api/tickets`), `UserController` (`/api/users`), `DashboardController` (`/api/dashboard`).
+    + Triển khai `DataInitializer` tự động nạp dữ liệu mẫu ban đầu: 4 tài khoản chuẩn mã hóa BCrypt, 4 phòng ban, 4 danh mục sự cố, 4 thang ưu tiên, 4 chính sách cam kết SLA và các phiếu mẫu.
+    + Xác thực biên dịch thành công 100% bằng Maven (`BUILD SUCCESS` trên 72 file Java source).
+  - **Đồng bộ trạng thái phản ứng đa phân hệ Frontend (`helpdesk-web`)**:
+    + Xây dựng trung tâm lưu trữ `ticketStore.js` (Zustand tích hợp `localStorage` persist) duy trì dữ liệu liên tục không bị mất khi F5 tải lại trang.
+    + Tự động đồng bộ thời gian thực luồng tạo phiếu từ `CustomerCreateTicketPage` và `CreateTicketPage` sang danh sách `TicketListPage` và `CustomerTicketListPage`.
+    + Cho phép Kỹ thuật viên/Quản lý tiếp nhận, chuyển trạng thái (NEW -> ASSIGNED -> IN_PROGRESS -> RESOLVED), gán phụ trách và ghi chú nội bộ ngay trên `TicketDetailPage`.
+    + Tự động cập nhật tức thời 4 thẻ chỉ số KPI và biểu đồ phân bổ trên `DashboardPage`.
+    + Đóng gói kiểm thử Vite build hoàn thành 0 lỗi cú pháp/linter.
 * **v2.5.0 (2026-09-27)**:
   - Tối ưu hóa toàn diện giao diện di động (Mobile Responsive UI/UX).
   - Tích hợp thanh điều hướng đáy di động (Mobile Bottom Navigation Bar) cho phân hệ Customer Portal.

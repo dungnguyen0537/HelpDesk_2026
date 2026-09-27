@@ -14,71 +14,45 @@ import {
   User,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useTicketStore } from '../../store/ticketStore';
+import { TICKET_STATUS, TICKET_PRIORITY } from '../../utils/constants';
+import { formatDate } from '../../utils/formatters';
 
 export default function CustomerTicketListPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const allTickets = useTicketStore((state) => state.tickets);
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const tickets = [
-    {
-      id: 'TK-20260327-0012',
-      title: 'Màn hình máy tính Dell 24 inch tại bàn làm việc bị sọc ngang',
-      category: 'Phần cứng & Thiết bị',
-      priority: 'HIGH',
-      priorityLabel: 'Ưu tiên cao',
-      status: 'IN_PROGRESS',
-      statusLabel: 'Đang sửa chữa',
-      statusClass: 'bg-blue-50 text-blue-700 border-blue-200',
-      createdAt: '27/03/2026 14:15',
-      updatedAt: '27/03/2026 14:30',
-      assignedTo: 'Trần Văn Bình (Kỹ Thuật Viên IT)',
-      commentsCount: 3,
-      slaNotice: 'Cam kết SLA: Phản hồi trong 15p - Hoàn thành trong 2h',
-    },
-    {
-      id: 'TK-20260325-0089',
-      title: 'Xin cấp quyền truy cập thư mục Báo cáo Tài chính Q1/2026',
-      category: 'Tài khoản & Phân quyền',
-      priority: 'MEDIUM',
-      priorityLabel: 'Bình thường',
-      status: 'RESOLVED',
-      statusLabel: 'Đã hoàn thành',
-      statusClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      createdAt: '25/03/2026 09:00',
-      updatedAt: '25/03/2026 16:30',
-      assignedTo: 'Lê Thị Cúc (Quản Lý Dịch Vụ)',
-      commentsCount: 2,
-      slaNotice: 'Đã xử lý đúng hạn cam kết SLA',
-    },
-    {
-      id: 'TK-20260320-0045',
-      title: 'Cài đặt phần mềm đọc file CAD và máy in văn phòng lầu 2',
-      category: 'Phần mềm & Hệ thống',
-      priority: 'LOW',
-      priorityLabel: 'Thấp',
-      status: 'CLOSED',
-      statusLabel: 'Đã đóng phiếu',
-      statusClass: 'bg-slate-100 text-slate-700 border-slate-200',
-      createdAt: '20/03/2026 10:20',
-      updatedAt: '21/03/2026 11:00',
-      assignedTo: 'Trần Văn Bình (Kỹ Thuật Viên IT)',
-      commentsCount: 4,
-      slaNotice: 'Khách hàng đã đánh giá 5 sao ★★★★★',
-    },
-  ];
+  // Show user's tickets if any match, or all tickets for portal demo
+  const userTickets = user
+    ? allTickets.filter(
+        (t) =>
+          (t.creatorEmail && user.email && t.creatorEmail.toLowerCase() === user.email.toLowerCase()) ||
+          (t.creator && user.fullName && t.creator.toLowerCase().includes(user.fullName.toLowerCase()))
+      )
+    : [];
 
-  const filteredTickets = tickets.filter((t) => {
+  const displayTickets = userTickets.length > 0 ? userTickets : allTickets;
+
+  const activeTicketsCount = displayTickets.filter(
+    (t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED'
+  ).length;
+  const resolvedTicketsCount = displayTickets.filter(
+    (t) => t.status === 'RESOLVED' || t.status === 'CLOSED'
+  ).length;
+
+  const filteredTickets = displayTickets.filter((t) => {
     const matchesTab =
       activeTab === 'ALL' ||
-      (activeTab === 'ACTIVE' && (t.status === 'NEW' || t.status === 'IN_PROGRESS' || t.status === 'ASSIGNED')) ||
+      (activeTab === 'ACTIVE' && t.status !== 'RESOLVED' && t.status !== 'CLOSED') ||
       (activeTab === 'RESOLVED' && (t.status === 'RESOLVED' || t.status === 'CLOSED'));
 
     const matchesSearch =
       t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.category.toLowerCase().includes(searchTerm.toLowerCase());
+      (t.category && t.category.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return matchesTab && matchesSearch;
   });
@@ -115,7 +89,7 @@ export default function CustomerTicketListPage() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Tất cả ({tickets.length})
+            Tất cả ({displayTickets.length})
           </button>
           <button
             onClick={() => setActiveTab('ACTIVE')}
@@ -125,7 +99,7 @@ export default function CustomerTicketListPage() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Đang xử lý (1)
+            Đang xử lý ({activeTicketsCount})
           </button>
           <button
             onClick={() => setActiveTab('RESOLVED')}
@@ -135,7 +109,7 @@ export default function CustomerTicketListPage() {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Đã hoàn thành (2)
+            Đã hoàn thành ({resolvedTicketsCount})
           </button>
         </div>
 
@@ -155,55 +129,67 @@ export default function CustomerTicketListPage() {
       {/* Ticket Cards List */}
       <div className="space-y-4">
         {filteredTickets.length > 0 ? (
-          filteredTickets.map((ticket) => (
-            <div
-              key={ticket.id}
-              onClick={() => navigate(`/tickets/${ticket.id}`)}
-              className="bg-white rounded-2xl p-5 border border-slate-200 hover:border-primary-400 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-5 group"
-            >
-              <div className="space-y-2.5 max-w-2xl">
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="font-mono font-bold text-primary-600 bg-primary-50 px-2.5 py-0.5 rounded-md border border-primary-100">
-                    {ticket.id}
-                  </span>
-                  <span className="text-slate-500 font-medium">{ticket.category}</span>
-                  <span className="text-slate-300">•</span>
-                  <span className="text-slate-400 text-[11px]">Tạo lúc: {ticket.createdAt}</span>
+          filteredTickets.map((ticket) => {
+            const statusInfo = TICKET_STATUS[ticket.status] || {
+              label: ticket.status,
+              color: 'bg-slate-100 text-slate-700 border-slate-300',
+            };
+            const assignedName = ticket.assignedTo || ticket.assignee || 'Đang chờ phân công';
+            const commentsNum = ticket.comments?.length || 0;
+            const notice = ticket.slaNotice || ticket.slaResolution || 'Cam kết hỗ trợ theo SLA';
+
+            return (
+              <div
+                key={ticket.id}
+                onClick={() => navigate(`/tickets/${ticket.id}`)}
+                className="bg-white rounded-2xl p-5 border border-slate-200 hover:border-primary-400 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-5 group"
+              >
+                <div className="space-y-2.5 max-w-2xl">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="font-mono font-bold text-primary-600 bg-primary-50 px-2.5 py-0.5 rounded-md border border-primary-100">
+                      {ticket.id}
+                    </span>
+                    <span className="text-slate-500 font-medium">{ticket.category}</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-slate-400 text-[11px]">Tạo lúc: {formatDate(ticket.createdAt)}</span>
+                  </div>
+
+                  <h3 className="font-bold text-slate-900 text-base group-hover:text-primary-600 transition-colors">
+                    {ticket.title}
+                  </h3>
+
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                    <span className="flex items-center space-x-1.5">
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      <span>
+                        Kỹ thuật viên: <strong className="text-slate-700">{assignedName}</strong>
+                      </span>
+                    </span>
+
+                    <span className="flex items-center space-x-1">
+                      <MessageSquare className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{commentsNum} phản hồi</span>
+                    </span>
+
+                    <span className="text-emerald-600 text-[11px] font-medium bg-emerald-50 px-2 py-0.5 rounded">
+                      {notice}
+                    </span>
+                  </div>
                 </div>
 
-                <h3 className="font-bold text-slate-900 text-base group-hover:text-primary-600 transition-colors">
-                  {ticket.title}
-                </h3>
-
-                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
-                  <span className="flex items-center space-x-1.5">
-                    <User className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Kỹ thuật viên: <strong className="text-slate-700">{ticket.assignedTo}</strong></span>
+                {/* Status and Action */}
+                <div className="flex items-center justify-between md:justify-end space-x-4 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
+                  <span className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${statusInfo.color}`}>
+                    {statusInfo.label}
                   </span>
 
-                  <span className="flex items-center space-x-1">
-                    <MessageSquare className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{ticket.commentsCount} phản hồi</span>
-                  </span>
-
-                  <span className="text-emerald-600 text-[11px] font-medium bg-emerald-50 px-2 py-0.5 rounded">
-                    {ticket.slaNotice}
-                  </span>
+                  <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary-600 group-hover:text-white transition-all shadow-xs">
+                    <ChevronRight className="w-4 h-4" />
+                  </div>
                 </div>
               </div>
-
-              {/* Status and Action */}
-              <div className="flex items-center justify-between md:justify-end space-x-4 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
-                <span className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${ticket.statusClass}`}>
-                  {ticket.statusLabel}
-                </span>
-
-                <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-primary-600 group-hover:text-white transition-all shadow-xs">
-                  <ChevronRight className="w-4 h-4" />
-                </div>
-              </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-300 space-y-3">
             <Ticket className="w-10 h-10 text-slate-300 mx-auto" />
