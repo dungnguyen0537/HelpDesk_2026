@@ -11,6 +11,8 @@ import CreateTicketPage from './pages/CreateTicketPage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import ReportsPage from './pages/ReportsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import AdminDepartmentsPage from './pages/AdminDepartmentsPage';
+import AdminSlaPoliciesPage from './pages/AdminSlaPoliciesPage';
 import ProfilePage from './pages/ProfilePage';
 
 // Customer Pages
@@ -94,6 +96,22 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <AdminUsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/departments"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminDepartmentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/sla-policies"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminSlaPoliciesPage />
               </ProtectedRoute>
             }
           />

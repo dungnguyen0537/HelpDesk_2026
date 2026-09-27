@@ -414,6 +414,18 @@ Hệ thống đã nạp sẵn dữ liệu mẫu phục vụ kiểm thử và đ�
 > **QUY TẮC BẮT BUỘC CỦA DỰ ÁN**: Mỗi khi mã nguồn hoặc tính năng được cải tiến, bổ sung hay chỉnh sửa, tệp `README.md` này **bắt buộc phải được cập nhật đồng thời** để phản ánh chính xác nhất hiện trạng kỹ thuật của hệ thống.
 
 ### Lịch Sử Phiên Bản (Release History):
+* **v2.6.2 (2026-09-27)**:
+  - **Triển khai phân hệ Quản lý Phòng Ban & Danh mục Sự cố (`/admin/departments`)**:
+    + Thiết kế giao diện kép Tab linh hoạt: Tab Phòng ban & Tab Danh mục sự cố.
+    + Quản lý mã phòng, tên phòng ban, trưởng bộ phận, số lượng nhân sự và danh mục trực thuộc.
+    + Quản lý phân loại sự cố: Mã mục, nhóm sự cố, mức độ ưu tiên mặc định, cam kết thời gian giải quyết dự kiến và trạng thái kích hoạt.
+    + Tích hợp modal thêm mới phòng ban & danh mục tương tác thời gian thực với bộ lọc tìm kiếm tức thì.
+  - **Triển khai phân hệ Quản lý Chính Sách Cam Kết Dịch Vụ SLA (`/admin/sla-policies`)**:
+    + Bảng điều khiển ma trận 4 chính sách cam kết SLA chuẩn hóa (P1 Khẩn cấp, P2 Ưu tiên cao, P3 Bình thường, P4 Tiêu chuẩn).
+    + Thống kê 4 chỉ số KPI vận hành: Tỷ lệ tuân thủ toàn cơ quan (98.4%), Thời gian phản hồi TB (11.8 phút), Thời gian xử lý TB (2.4 giờ), Tình trạng kích hoạt quy tắc leo thang tự động (Escalation).
+    + Cho phép cấu hình chi tiết ngưỡng thời gian phản hồi, thời hạn giải quyết dứt điểm và tỷ lệ kích hoạt leo thang.
+    + Bổ sung modal tạo chính sách SLA mới và cơ chế bật/tắt (toggle) trạng thái áp dụng tức thời.
+  - **Đồng bộ định tuyến bảo mật**: Cấu hình kiểm soát phân quyền (`ProtectedRoute allowedRoles={['ADMIN']}`) trong `App.jsx`, ngăn chặn hoàn toàn các vai trò khác truy cập trái phép.
 * **v2.6.1 (2026-09-27)**:
   - **Sửa lỗi & Nâng cấp Hệ thống Đính kèm Tệp tin & Hình ảnh Sự cố**:
     + Khắc phục sự cố không thể chọn tệp trên cả 2 giao diện `CreateTicketPage` và `CustomerCreateTicketPage`: Bổ sung `<input type="file" ref={...}>` liên kết hoàn chỉnh với vùng Dropzone.
