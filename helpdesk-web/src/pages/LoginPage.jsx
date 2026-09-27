@@ -165,7 +165,7 @@ export default function LoginPage() {
           {/* Quick Demo Credentials for all Roles */}
           <div className="mt-6 pt-4 border-t border-slate-100 bg-slate-50/80 rounded-xl p-3.5 text-xs text-slate-600">
             <p className="font-semibold text-slate-700 mb-2 text-center text-xs">
-              🎯 Chọn vai trò để trải nghiệm nhanh các phân hệ:
+              Chọn vai trò trải nghiệm hệ thống:
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -180,10 +180,10 @@ export default function LoginPage() {
                 }`}
               >
                 <div className="font-medium text-[11px] flex items-center justify-between">
-                  <span>👤 Người dùng / Khách</span>
-                  <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded">User</span>
+                  <span>Người dùng / Khách</span>
+                  <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded font-mono">USER</span>
                 </div>
-                <div className="text-[10px] text-slate-500 truncate mt-0.5">Tạo & theo dõi ticket</div>
+                <div className="text-[10px] text-slate-500 truncate mt-0.5">Tạo và theo dõi yêu cầu</div>
               </button>
 
               <button
@@ -198,10 +198,10 @@ export default function LoginPage() {
                 }`}
               >
                 <div className="font-medium text-[11px] flex items-center justify-between">
-                  <span>🛠️ Kỹ thuật viên</span>
-                  <span className="text-[9px] bg-blue-100 text-blue-700 px-1 rounded">Agent</span>
+                  <span>Kỹ thuật viên IT</span>
+                  <span className="text-[9px] bg-blue-100 text-blue-700 px-1 rounded font-mono">AGENT</span>
                 </div>
-                <div className="text-[10px] text-slate-500 truncate mt-0.5">Xử lý sự cố kỹ thuật</div>
+                <div className="text-[10px] text-slate-500 truncate mt-0.5">Tiếp nhận và xử lý sự cố</div>
               </button>
 
               <button
@@ -216,10 +216,10 @@ export default function LoginPage() {
                 }`}
               >
                 <div className="font-medium text-[11px] flex items-center justify-between">
-                  <span>📊 Quản lý / Dispatch</span>
-                  <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded">Manager</span>
+                  <span>Quản lý / Điều phối</span>
+                  <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded font-mono">MANAGER</span>
                 </div>
-                <div className="text-[10px] text-slate-500 truncate mt-0.5">Điều phối & Báo cáo</div>
+                <div className="text-[10px] text-slate-500 truncate mt-0.5">Điều phối và báo cáo SLA</div>
               </button>
 
               <button
@@ -234,10 +234,10 @@ export default function LoginPage() {
                 }`}
               >
                 <div className="font-medium text-[11px] flex items-center justify-between">
-                  <span>⚙️ Quản trị viên</span>
-                  <span className="text-[9px] bg-purple-100 text-purple-700 px-1 rounded">Admin</span>
+                  <span>Quản trị viên</span>
+                  <span className="text-[9px] bg-purple-100 text-purple-700 px-1 rounded font-mono">ADMIN</span>
                 </div>
-                <div className="text-[10px] text-slate-500 truncate mt-0.5">Toàn quyền hệ thống</div>
+                <div className="text-[10px] text-slate-500 truncate mt-0.5">Cấu hình toàn bộ hệ thống</div>
               </button>
             </div>
           </div>

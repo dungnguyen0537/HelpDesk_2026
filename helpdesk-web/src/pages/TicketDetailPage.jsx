@@ -209,7 +209,7 @@ export default function TicketDetailPage() {
               />
               <div className="flex items-center justify-between mt-2.5">
                 <span className="text-[11px] text-slate-400">
-                  {activeCommentTab === 'INTERNAL' ? '⚠️ Khách hàng sẽ không thấy tin nhắn này' : 'Tin nhắn công khai gửi đến email khách'}
+                  {activeCommentTab === 'INTERNAL' ? 'Ghi chú nội bộ (Khách hàng không nhìn thấy nội dung này)' : 'Tin nhắn công khai gửi đến email khách'}
                 </span>
                 <Button type="submit" size="sm" variant={activeCommentTab === 'INTERNAL' ? 'secondary' : 'primary'}>
                   <Send className="w-3.5 h-3.5 mr-1" />
