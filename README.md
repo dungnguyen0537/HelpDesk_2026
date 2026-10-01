@@ -422,7 +422,23 @@ Hệ thống đã nạp sẵn dữ liệu mẫu phục vụ kiểm thử và đ�
     + Định dạng danh sách gạch đầu dòng `-`, `*` thành các điểm chấm màu xanh nhận diện trực quan.
     + Định dạng tiêu đề cấp 3 `###` thành các thanh phân tách phân mục trang trọng có viền gạch dưới.
     + Đóng gói khung lệnh Terminal nền đen viền kim loại cho các khối mã nguồn nhiều dòng ````bash````.
-* **v2.6.3 (2026-09-27)**:
+* **v2.7.0 (2026-09-27)**:
+  - **Triển khai Chuẩn Hóa Toàn Diện Quy Trình Nghiệp Vụ ITSM Đại Học & Trường Học**:
+    + **4 Tác nhân chính**: Người dùng (Sinh viên, Giảng viên, Cán bộ), Nhân viên giải quyết (Kỹ thuật viên CNTT), Quản lý (Trưởng bộ phận) và Admin.
+    + **Vòng đời 10 bước khép kín**: Tạo phiếu -> Định tuyến & Tính SLA -> Phân công -> Tiếp nhận & Phản hồi đầu tiên -> Trao đổi & Chờ người dùng -> Xử lý & Ghi nhận nguyên nhân/giải pháp -> Đóng phiếu/Mở lại -> Đánh giá CSAT -> Cảnh báo SLA -> Báo cáo Quản lý.
+    + **Ma trận Xác định Ưu tiên Tự động (Priority Matrix)**: Kết hợp Mức độ Ảnh hưởng (`Ảnh hưởng rộng / Toàn khu vực`, `Một nhóm / Một lớp`, `Cá nhân / Chỉ mình tôi`) và Mức Khẩn cấp (`Cao`, `Trung bình`, `Thấp`) để tự động tính toán chính xác cấp độ P1 (Khẩn cấp), P2 (Cao), P3 (Trung bình), P4 (Thấp).
+    + **Bộ cam kết thời hạn dịch vụ SLA chuẩn mực**:
+      * **P1**: Phản hồi đầu tiên trong **15 phút**, Giải quyết dứt điểm trong **4 giờ**.
+      * **P2**: Phản hồi đầu tiên trong **30 phút**, Giải quyết trong **8 giờ làm việc**.
+      * **P3**: Phản hồi đầu tiên trong **2 giờ làm việc**, Giải quyết trong **3 ngày làm việc**.
+      * **P4**: Phản hồi đầu tiên trong **1 ngày làm việc**, Giải quyết trong **5 ngày làm việc**.
+    + **Cơ chế Tạm dừng & Tự động phục hồi đồng hồ SLA (`WAITING_USER`)**: Khi kỹ thuật viên yêu cầu bổ sung thông tin, trạng thái chuyển sang "Chờ người dùng" (đồng hồ SLA tạm ngưng). Khi người dùng gửi phản hồi/bình luận, hệ thống tự động đưa phiếu về "Đang xử lý" và tiếp tục tính thời gian.
+    + **Ghi nhận Nguyên nhân & Giải pháp bắt buộc**: Khi kỹ thuật viên chuyển trạng thái sang "Đã giải quyết", hệ thống kích hoạt modal bắt buộc nhập "Nguyên nhân sự cố" và "Giải pháp khắc phục", lưu vết vào thẻ tóm tắt và lịch sử phiếu.
+    + **Cơ chế Chống lạm dụng mở lại (Re-open Limit Safeguard)**: Người dùng được mở lại tối đa 2 lần trong 7 ngày. Lần mở lại thứ 3 vượt hạn mức sẽ tự động kích hoạt leo thang thẳng lên Quản lý bộ phận can thiệp khẩn cấp.
+    + **Đóng phiếu & Đánh giá dịch vụ CSAT 5 sao**: Nút hành động "Đã ổn, đóng phiếu" kèm modal đánh giá 1-5 sao và ý kiến nhận xét trực tiếp tại danh sách yêu cầu của người dùng.
+    + **Chế độ Khẩn cấp Lớp học (Classroom Emergency Mode)**: Tích hợp công tắc dành riêng cho Giảng viên đang đứng lớp gặp sự cố máy chiếu, loa, micro hoặc mạng giảng dạy - tự động nâng mức ưu tiên lên P1 Khẩn cấp tức thì.
+    + **Cảnh báo phiếu trùng lặp trong 24h (Duplicate Ticket Warning)**: Tự động phát hiện và cảnh báo người dùng khi đang có phiếu cùng danh mục chưa đóng.
+* **v2.6.4 (2026-09-27)**:
   - **Triển khai toàn diện Trung Tâm Tri Thức & Cẩm Nang Kỹ Thuật (`/knowledge-base`)**:
     + Xây dựng kho dữ liệu 8 bài hướng dẫn kỹ thuật chi tiết: Cài đặt và cấu hình VPN FortiClient, xử lý Outlook Disconnected, Map ổ đĩa mạng chia sẻ NAS (Z:), sửa lỗi máy in Offline & kẹt lệnh Print Spooler, quy tắc mật khẩu Domain & tự mở khóa 5 lần, khắc phục Wi-Fi No Internet (lệnh ipconfig /release /flushdns /renew), cấu hình phần mềm kế toán MISA SQL Server, kích hoạt xác thực 2 bước (2FA).
     + Tích hợp **Cửa sổ Đọc Tài Liệu Chi Tiết (Article Reader Modal)**: Định dạng Markdown trực quan, chia đề mục rõ ràng, hiển thị code block dòng lệnh terminal `bash`/`cmd`.

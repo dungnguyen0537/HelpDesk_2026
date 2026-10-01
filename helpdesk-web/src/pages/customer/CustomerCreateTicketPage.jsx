@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   PlusCircle,
@@ -16,9 +16,14 @@ import {
   MapPin,
   Clock,
   ChevronLeft,
+  AlertTriangle,
+  Zap,
+  Users,
+  User as UserIcon,
+  Globe,
 } from 'lucide-react';
 import Button from '../../components/common/Button';
-import { useTicketStore } from '../../store/ticketStore';
+import { useTicketStore, calculatePriorityMatrix } from '../../store/ticketStore';
 import { useAuthStore } from '../../store/authStore';
 
 export default function CustomerCreateTicketPage() {
@@ -27,10 +32,14 @@ export default function CustomerCreateTicketPage() {
   const preSelectedCat = searchParams.get('category') || '1';
 
   const [formData, setFormData] = useState({
+    ticketType: 'INCIDENT', // INCIDENT, SERVICE_REQUEST, QUESTION
     category: preSelectedCat,
+    subCategory: 'Wifi chậm hoặc chập chờn',
     title: '',
     description: '',
-    urgency: 'MEDIUM',
+    impact: 'PERSONAL', // PERSONAL, GROUP, BROAD
+    urgency: 'MEDIUM', // LOW, MEDIUM, HIGH
+    isClassroomEmergency: false,
     location: '',
     phone: '0912.345.678',
   });
@@ -41,36 +50,87 @@ export default function CustomerCreateTicketPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdTicket, setCreatedTicket] = useState(null);
 
+  const { tickets, createTicket } = useTicketStore();
+  const { user } = useAuthStore();
+
+  const ticketTypes = [
+    { value: 'INCIDENT', label: 'Sự cố', desc: 'Dịch vụ hoặc thiết bị bị gián đoạn, hỏng hóc' },
+    { value: 'SERVICE_REQUEST', label: 'Yêu cầu dịch vụ', desc: 'Xin cấp quyền, cài đặt phần mềm, cấp thiết bị' },
+    { value: 'QUESTION', label: 'Câu hỏi / Tư vấn', desc: 'Thắc mắc về quy trình hoặc hướng dẫn kỹ thuật' },
+  ];
+
   const categories = [
-    { id: '1', name: 'Phần cứng & Thiết bị (Máy tính, màn hình, máy in)', icon: Laptop },
-    { id: '2', name: 'Mạng LAN, Wi-Fi & Kết nối VPN', icon: Wifi },
-    { id: '3', name: 'Phần mềm & Hệ thống (ERP, Outlook, Office 365)', icon: FileCode2 },
-    { id: '4', name: 'Tài khoản & Phân quyền truy cập thư mục', icon: KeyRound },
+    {
+      id: '1',
+      name: 'Mạng LAN & Wi-Fi',
+      icon: Wifi,
+      subCategories: ['Wifi chậm hoặc chập chờn', 'Không kết nối được wifi', 'Mất mạng dây LAN', 'Yêu cầu cấp IP tĩnh'],
+    },
+    {
+      id: '2',
+      name: 'Phần cứng & Thiết bị phòng học',
+      icon: Laptop,
+      subCategories: ['Máy chiếu không lên nguồn', 'Micro / Loa trợ giảng hỏng', 'Máy tính giảng viên không boot', 'Chuột / Bàn phím liệt'],
+    },
+    {
+      id: '3',
+      name: 'Phần mềm đào tạo & Thi trực tuyến',
+      icon: FileCode2,
+      subCategories: ['Hệ thống đăng ký học phần', 'Phần mềm thi trắc nghiệm LMS', 'Microsoft Teams / Office 365', 'Lỗi phần mềm thực hành'],
+    },
+    {
+      id: '4',
+      name: 'Tài khoản trường & Email SV/GV',
+      icon: KeyRound,
+      subCategories: ['Quên mật khẩu tài khoản trường', 'Khóa tài khoản portal sinh viên', 'Không nhận được email xác nhận', 'Cấp quyền truy cập thư mục'],
+    },
+  ];
+
+  const impactLevels = [
+    { value: 'PERSONAL', label: 'Cá nhân', desc: 'Chỉ ảnh hưởng mình tôi', icon: UserIcon },
+    { value: 'GROUP', label: 'Một nhóm / Phòng', desc: 'Ảnh hưởng một lớp học hoặc một phòng ban', icon: Users },
+    { value: 'BROAD', label: 'Nhiều người / Toàn khu vực', desc: 'Ảnh hưởng cả tòa nhà, khu vực trường', icon: Globe },
   ];
 
   const urgencyLevels = [
     {
       value: 'LOW',
-      label: 'Thấp (Không gấp)',
-      desc: 'Vẫn làm việc bình thường, yêu cầu hỗ trợ chung',
-      time: 'Giải quyết trong 24h',
+      label: 'Thấp (Chưa gấp)',
+      desc: 'Công việc không bị gián đoạn nhiều',
+      time: 'Giải quyết trong 5 ngày làm việc',
     },
     {
       value: 'MEDIUM',
-      label: 'Bình thường',
-      desc: 'Ảnh hưởng đến một số tác vụ nhưng vẫn có thể làm việc khác',
-      time: 'Giải quyết trong 4h',
+      label: 'Trung bình (Bị chậm)',
+      desc: 'Ảnh hưởng một phần công việc',
+      time: 'Giải quyết trong 3 ngày làm việc',
     },
     {
       value: 'HIGH',
-      label: 'Khẩn cấp / Dừng công việc',
-      desc: 'Máy tính hoặc mạng hỏng hoàn toàn, không thể tiếp tục công việc',
-      time: 'Tiếp nhận ngay trong 15p',
+      label: 'Cao (Không học/làm việc được)',
+      desc: 'Dừng hoàn toàn công việc hoặc giờ dạy',
+      time: 'Ưu tiên cao / Giải quyết trong 4h - 8h',
     },
   ];
 
-  const { createTicket } = useTicketStore();
-  const { user } = useAuthStore();
+  // Calculated Priority Matrix Preview
+  const calculatedPriority = formData.isClassroomEmergency
+    ? 'URGENT'
+    : calculatePriorityMatrix(formData.impact, formData.urgency);
+
+  const priorityLabelMap = {
+    URGENT: { label: 'P1 - Khẩn cấp', color: 'bg-rose-100 text-rose-800 border-rose-300' },
+    HIGH: { label: 'P2 - Cao', color: 'bg-amber-100 text-amber-800 border-amber-300' },
+    MEDIUM: { label: 'P3 - Trung bình', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+    LOW: { label: 'P4 - Thấp', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  };
+
+  // Duplicate Check: Check if this user already opened a ticket in this category in the last 24h
+  const existingCategoryTicket = tickets.find((t) => {
+    const isSameCategory = t.category && t.category.includes(formData.category);
+    const isOpen = t.status !== 'RESOLVED' && t.status !== 'CLOSED';
+    return isSameCategory && isOpen;
+  });
 
   const processFiles = (files) => {
     const fileArray = Array.from(files);
@@ -144,18 +204,21 @@ export default function CustomerCreateTicketPage() {
     setIsSubmitting(true);
 
     const selectedCategoryObj = categories.find((c) => c.id === formData.category);
-    const categoryName = selectedCategoryObj ? selectedCategoryObj.name.split(' (')[0] : 'Hỗ trợ kỹ thuật';
+    const categoryName = selectedCategoryObj ? selectedCategoryObj.name : 'Mạng LAN & Wi-Fi';
 
-    const creatorName = user ? `${user.fullName} (${user.department || 'Khách hàng'})` : 'Nguyễn Thu Trang (Marketing)';
-    const creatorEmail = user?.email || 'customer@company.com';
+    const creatorName = user ? `${user.fullName} (${user.department || 'Người dùng'})` : 'Nguyễn Thu Trang (Khoa CNTT)';
+    const creatorEmail = user?.email || 'customer@truong.edu.vn';
 
     const newTicket = createTicket({
       title: formData.title,
       description: formData.description,
+      ticketType: formData.ticketType,
       category: categoryName,
-      department: 'IT Operations & Mạng',
-      priority: formData.urgency,
+      subCategory: formData.subCategory,
+      impact: formData.impact,
       urgency: formData.urgency,
+      isClassroomEmergency: formData.isClassroomEmergency,
+      department: 'Trung tâm CNTT & Truyền thông',
       location: formData.location,
       phone: formData.phone,
       creator: creatorName,
@@ -168,7 +231,11 @@ export default function CustomerCreateTicketPage() {
       setCreatedTicket({
         id: newTicket.id,
         title: newTicket.title,
-        eta: newTicket.eta || (formData.urgency === 'HIGH' ? '15 - 30 phút' : '2 - 4 giờ làm việc'),
+        priorityCode: newTicket.priorityCode || 'P3',
+        priorityNotice: newTicket.slaNotice || 'Đang xác định',
+        firstResponseSLA: newTicket.firstResponseSLA || '2 giờ làm việc',
+        resolutionSLA: newTicket.resolutionSLA || '3 ngày làm việc',
+        eta: newTicket.eta || 'Trong ngày',
       });
     }, 600);
   };
@@ -182,34 +249,50 @@ export default function CustomerCreateTicketPage() {
 
         <div className="space-y-2">
           <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-            Gửi Yêu Cầu Thành Công
+            Đã Tiếp Nhận Yêu Cầu Của Bạn
           </span>
           <h1 className="text-2xl font-extrabold text-slate-900">
-            Hệ thống đã tiếp nhận sự cố của bạn!
+            Hệ thống đã tiếp nhận và đưa vào hàng chờ xử lý
           </h1>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            Kỹ thuật viên phù hợp nhất đã được tự động điều phối để xử lý yêu cầu của bạn.
+            Mã số phiếu và thời hạn cam kết SLA đã được ghi nhận. Hệ thống đang tự động điều phối kỹ thuật viên phụ trách.
           </p>
         </div>
 
-        {/* Ticket receipt card */}
+        {/* Ticket receipt card matching section III.2 */}
         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm text-left max-w-lg mx-auto space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="text-xs text-slate-500">Mã phiếu hỗ trợ:</span>
+            <span className="text-xs text-slate-500">Mã phiếu:</span>
             <span className="font-mono font-bold text-primary-600 text-base">{createdTicket.id}</span>
           </div>
 
           <div className="space-y-1">
-            <span className="text-xs text-slate-500">Nội dung yêu cầu:</span>
+            <span className="text-xs text-slate-500">Tiêu đề:</span>
             <p className="font-semibold text-slate-800 text-sm">{createdTicket.title}</p>
           </div>
 
-          <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-            <span className="flex items-center space-x-1.5 text-slate-600">
-              <Clock className="w-4 h-4 text-amber-500" />
-              <span>Thời gian phản hồi cam kết (SLA):</span>
+          <div className="flex items-center justify-between py-2 border-y border-slate-100 text-xs">
+            <span className="text-slate-500">Mức ưu tiên:</span>
+            <span className="font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded border border-rose-200">
+              {createdTicket.priorityCode} ({createdTicket.priorityNotice.split(':')[1]?.split('-')[0]?.trim() || 'Theo quy trình'})
             </span>
-            <span className="font-bold text-slate-900">{createdTicket.eta}</span>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center space-x-1.5 text-slate-600">
+                <Clock className="w-3.5 h-3.5 text-amber-500" />
+                <span>Hạn phản hồi đầu tiên:</span>
+              </span>
+              <span className="font-bold text-slate-900">{createdTicket.firstResponseSLA}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="flex items-center space-x-1.5 text-slate-600">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Hạn giải quyết cam kết:</span>
+              </span>
+              <span className="font-bold text-slate-900">{createdTicket.resolutionSLA}</span>
+            </div>
           </div>
         </div>
 
@@ -259,11 +342,77 @@ export default function CustomerCreateTicketPage() {
         </p>
       </div>
 
+      {/* Warning banner if duplicate ticket exists in 24h (Section III.2) */}
+      {existingCategoryTicket && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-amber-900">
+          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-bold text-amber-800">Cảnh báo yêu cầu có thể trùng lặp:</span>
+            <p>
+              Bạn đang có một yêu cầu đang mở trong cùng danh mục ({existingCategoryTicket.id} - "{existingCategoryTicket.title}"). 
+              Nếu là cùng một sự cố, bạn có thể bổ sung phản hồi vào phiếu cũ thay vì tạo phiếu mới.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Classroom Emergency Mode Banner (Chế độ khẩn cấp lớp học) */}
+      <div className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${
+        formData.isClassroomEmergency ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-500/20' : 'bg-slate-50 border-slate-200'
+      }`}>
+        <div className="flex items-center space-x-3">
+          <div className={`p-2.5 rounded-xl ${formData.isClassroomEmergency ? 'bg-rose-600 text-white animate-pulse' : 'bg-slate-200 text-slate-600'}`}>
+            <Zap className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="font-bold text-slate-900 text-xs block">Sự cố trong giờ giảng trực tiếp tại phòng học</span>
+            <span className="text-[11px] text-slate-500">
+              Bật chế độ này nếu bạn là Giảng viên đang đứng lớp bị hỏng máy chiếu, micro, mạng. Hệ thống tự động nâng lên P1 Khẩn cấp!
+            </span>
+          </div>
+        </div>
+        <label className="relative inline-flex items-center cursor-pointer ml-4">
+          <input
+            type="checkbox"
+            checked={formData.isClassroomEmergency}
+            onChange={(e) => setFormData({ ...formData, isClassroomEmergency: e.target.checked })}
+            className="sr-only peer"
+          />
+          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
+        </label>
+      </div>
+
       <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-        {/* 1. Category Selection */}
+        {/* 1. Ticket Type Selection */}
         <div className="space-y-2">
           <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-            1. Loại Vấn Đề Cần Hỗ Trợ <span className="text-rose-500">*</span>
+            1. Loại Phiếu Yêu Cầu <span className="text-rose-500">*</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {ticketTypes.map((t) => {
+              const isSelected = formData.ticketType === t.value;
+              return (
+                <div
+                  key={t.value}
+                  onClick={() => setFormData({ ...formData, ticketType: t.value })}
+                  className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                    isSelected
+                      ? 'border-primary-500 bg-primary-50/70 ring-2 ring-primary-500/20'
+                      : 'border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="font-bold text-xs text-slate-900 block">{t.label}</span>
+                  <span className="text-[11px] text-slate-500 mt-0.5 block">{t.desc}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 2. Category & Subcategory Selection */}
+        <div className="space-y-3">
+          <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+            2. Danh Mục & Sự Cố Cụ Thể (2 cấp) <span className="text-rose-500">*</span>
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {categories.map((c) => {
@@ -272,7 +421,13 @@ export default function CustomerCreateTicketPage() {
               return (
                 <div
                   key={c.id}
-                  onClick={() => setFormData({ ...formData, category: c.id })}
+                  onClick={() => {
+                    setFormData({
+                      ...formData,
+                      category: c.id,
+                      subCategory: c.subCategories[0] || '',
+                    });
+                  }}
                   className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all flex items-start space-x-3 ${
                     isSelected
                       ? 'border-primary-500 bg-primary-50/60 ring-2 ring-primary-500/20'
@@ -283,34 +438,58 @@ export default function CustomerCreateTicketPage() {
                     <Icon className="w-4 h-4" />
                   </div>
                   <div className="text-xs">
-                    <span className="font-bold text-slate-900 block leading-tight">{c.name.split(' (')[0]}</span>
-                    <span className="text-[11px] text-slate-500 block mt-0.5">{c.name.split(' (')[1]?.replace(')', '') || ''}</span>
+                    <span className="font-bold text-slate-900 block leading-tight">{c.name}</span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      {c.subCategories.length} nhóm sự cố con
+                    </span>
                   </div>
                 </div>
               );
             })}
           </div>
+
+          {/* Subcategory dropdown */}
+          {categories.find((c) => c.id === formData.category) && (
+            <div className="space-y-1.5 pt-1">
+              <label className="block text-[11px] font-semibold text-slate-600">
+                Chọn sự cố con chi tiết:
+              </label>
+              <select
+                value={formData.subCategory}
+                onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 bg-slate-50"
+              >
+                {categories
+                  .find((c) => c.id === formData.category)
+                  ?.subCategories.map((sub, idx) => (
+                    <option key={idx} value={sub}>
+                      {sub}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        {/* 2. Issue Title */}
+        {/* 3. Issue Title */}
         <div className="space-y-1.5">
           <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-            2. Tóm Tắt Ngắn Gọn Sự Cố <span className="text-rose-500">*</span>
+            3. Tiêu Đề Yêu Cầu <span className="text-rose-500">*</span>
           </label>
           <input
             type="text"
             required
-            placeholder="Ví dụ: Máy in văn phòng lầu 2 bị kẹt giấy và báo đèn đỏ..."
+            placeholder="Ví dụ: Wifi phòng học A5.101 chập chờn không kết nối được..."
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
 
-        {/* 3. Detailed Description */}
+        {/* 4. Detailed Description */}
         <div className="space-y-1.5">
           <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-            3. Mô Tả Chi Tiết Vấn Đề Gặp Phải <span className="text-rose-500">*</span>
+            4. Mô Tả Chi Tiết Vấn Đề <span className="text-rose-500">*</span>
           </label>
           <textarea
             required
@@ -322,36 +501,77 @@ export default function CustomerCreateTicketPage() {
           ></textarea>
         </div>
 
-        {/* 4. Urgency selection */}
-        <div className="space-y-2">
-          <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-            4. Mức Độ Khẩn Cấp Ảnh Hưởng Công Việc <span className="text-rose-500">*</span>
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {urgencyLevels.map((lvl) => {
-              const isSelected = formData.urgency === lvl.value;
-              return (
-                <div
-                  key={lvl.value}
-                  onClick={() => setFormData({ ...formData, urgency: lvl.value })}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all text-left flex flex-col justify-between ${
-                    isSelected
-                      ? lvl.value === 'HIGH'
-                        ? 'border-rose-500 bg-rose-50/70 ring-2 ring-rose-500/20'
-                        : 'border-primary-500 bg-primary-50/70 ring-2 ring-primary-500/20'
-                      : 'border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  <div>
-                    <span className="font-bold text-xs text-slate-900 block">{lvl.label}</span>
-                    <span className="text-[11px] text-slate-500 mt-1 block">{lvl.desc}</span>
+        {/* 5. Impact and Urgency (Priority Matrix) */}
+        <div className="space-y-4 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+              5. Mức Độ Ảnh Hưởng & Mức Khẩn Cấp
+            </label>
+            <div className="flex items-center space-x-2 text-xs">
+              <span className="text-slate-500">Ưu tiên tự động:</span>
+              <span className={`px-2.5 py-0.5 rounded-full font-bold border text-[11px] ${priorityLabelMap[calculatedPriority]?.color}`}>
+                {priorityLabelMap[calculatedPriority]?.label}
+              </span>
+            </div>
+          </div>
+
+          {/* Impact Selector */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-semibold text-slate-600 block">Mức ảnh hưởng:</span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {impactLevels.map((imp) => {
+                const Icon = imp.icon;
+                const isSelected = formData.impact === imp.value;
+                return (
+                  <div
+                    key={imp.value}
+                    onClick={() => setFormData({ ...formData, impact: imp.value })}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex items-start space-x-2.5 ${
+                      isSelected
+                        ? 'border-primary-500 bg-primary-50/70 ring-2 ring-primary-500/20'
+                        : 'border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 text-slate-600 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-xs text-slate-900 block">{imp.label}</span>
+                      <span className="text-[11px] text-slate-500 block">{imp.desc}</span>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-semibold text-slate-400 mt-2 block border-t border-slate-100 pt-1">
-                    {lvl.time}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Urgency Selector */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-semibold text-slate-600 block">Mức khẩn cấp:</span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {urgencyLevels.map((lvl) => {
+                const isSelected = formData.urgency === lvl.value;
+                return (
+                  <div
+                    key={lvl.value}
+                    onClick={() => setFormData({ ...formData, urgency: lvl.value })}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all text-left flex flex-col justify-between ${
+                      isSelected
+                        ? lvl.value === 'HIGH'
+                          ? 'border-rose-500 bg-rose-50/70 ring-2 ring-rose-500/20'
+                          : 'border-primary-500 bg-primary-50/70 ring-2 ring-primary-500/20'
+                        : 'border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div>
+                      <span className="font-bold text-xs text-slate-900 block">{lvl.label}</span>
+                      <span className="text-[11px] text-slate-500 mt-0.5 block">{lvl.desc}</span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-slate-400 mt-2 block border-t border-slate-100 pt-1">
+                      {lvl.time}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 

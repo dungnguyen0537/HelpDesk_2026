@@ -39,12 +39,17 @@ export default function TicketDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { tickets, updateTicketStatus, assignTicket, addComment } = useTicketStore();
+  const { tickets, updateTicketStatus, assignTicket, addComment, resolveTicket } = useTicketStore();
   const { user } = useAuthStore();
 
   const [activeCommentTab, setActiveCommentTab] = useState('PUBLIC'); // 'PUBLIC' or 'INTERNAL'
   const [commentText, setCommentText] = useState('');
   const [previewModal, setPreviewModal] = useState(null); // { url, name }
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [resolveForm, setResolveForm] = useState({
+    reason: '',
+    solution: '',
+  });
 
   // Find ticket from store by ID or fallback to first
   const ticket = tickets.find((t) => t.id === id) || tickets[0];
@@ -72,7 +77,20 @@ export default function TicketDetailPage() {
   };
 
   const handleStatusChange = (newStatus) => {
+    if (newStatus === 'RESOLVED') {
+      setShowResolveModal(true);
+      return;
+    }
     updateTicketStatus(ticket.id, newStatus);
+  };
+
+  const handleSubmitResolution = (e) => {
+    e.preventDefault();
+    if (!resolveForm.reason.trim() || !resolveForm.solution.trim()) return;
+
+    resolveTicket(ticket.id, resolveForm.reason.trim(), resolveForm.solution.trim());
+    setShowResolveModal(false);
+    setResolveForm({ reason: '', solution: '' });
   };
 
   const handleAssigneeChange = (newAssignee) => {
@@ -132,18 +150,43 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
-        {/* Quick Resolution Controls */}
-        <div className="flex items-center space-x-2">
+        {/* Quick Resolution Controls according to ITSM specs */}
+        <div className="flex flex-wrap items-center gap-2">
           {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleStatusChange('RESOLVED')}
-              className="text-emerald-700 hover:bg-emerald-50 border-emerald-300"
-            >
-              <CheckCircle className="w-4 h-4 mr-1 text-emerald-600" />
-              Đánh dấu giải quyết
-            </Button>
+            <>
+              {ticket.status !== 'WAITING_USER' ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusChange('WAITING_USER')}
+                  className="text-purple-700 hover:bg-purple-50 border-purple-300"
+                  title="Tạm dừng tính giờ SLA trong lúc đợi người dùng cung cấp thông tin"
+                >
+                  <Clock className="w-4 h-4 mr-1 text-purple-600" />
+                  Chờ người dùng (Dừng SLA)
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusChange('IN_PROGRESS')}
+                  className="text-blue-700 hover:bg-blue-50 border-blue-300"
+                >
+                  <RotateCcw className="w-4 h-4 mr-1 text-blue-600" />
+                  Tiếp tục xử lý (Chạy SLA)
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleStatusChange('RESOLVED')}
+                className="text-emerald-700 hover:bg-emerald-50 border-emerald-300"
+              >
+                <CheckCircle className="w-4 h-4 mr-1 text-emerald-600" />
+                Đánh dấu đã giải quyết
+              </Button>
+            </>
           ) : (
             <Button
               variant="outline"
@@ -156,14 +199,16 @@ export default function TicketDetailPage() {
             </Button>
           )}
 
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => handleStatusChange('IN_PROGRESS')}
-          >
-            <ShieldAlert className="w-4 h-4 mr-1" />
-            Tiếp nhận xử lý
-          </Button>
+          {ticket.status === 'NEW' && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => handleStatusChange('IN_PROGRESS')}
+            >
+              <ShieldAlert className="w-4 h-4 mr-1" />
+              Tiếp nhận xử lý
+            </Button>
+          )}
         </div>
       </div>
 
@@ -171,6 +216,24 @@ export default function TicketDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Description & Comments */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Resolution Summary Card if resolved */}
+          {(ticket.resolutionReason || ticket.solutionText) && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4.5 space-y-2">
+              <div className="flex items-center space-x-2 text-emerald-800 font-bold text-xs uppercase tracking-wider">
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                <span>Ghi Nhận Kết Quả Xử Lý & Giải Pháp (ITSM Step 6)</span>
+              </div>
+              <div className="text-xs space-y-1 text-slate-700 pt-1">
+                <div>
+                  <strong className="text-slate-900">Nguyên nhân sự cố:</strong> {ticket.resolutionReason}
+                </div>
+                <div>
+                  <strong className="text-slate-900">Giải pháp khắc phục:</strong> {ticket.solutionText}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Issue Content Card */}
           <Card title="Nội dung sự cố ban đầu">
             <p className="text-xs md:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
@@ -531,6 +594,82 @@ export default function TicketDetailPage() {
                 className="max-w-full max-h-[80vh] object-contain rounded-lg"
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resolution Details Modal (ITSM Step 6) */}
+      {showResolveModal && (
+        <div
+          onClick={() => setShowResolveModal(false)}
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-5"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Ghi Nhận Kết Quả Xử Lý Phiếu</h3>
+                  <span className="text-[11px] text-slate-500">Mã phiếu: {ticket.id}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowResolveModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitResolution} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">
+                  1. Nguyên Nhân Gốc Của Sự Cố <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={2}
+                  value={resolveForm.reason}
+                  onChange={(e) => setResolveForm({ ...resolveForm, reason: e.target.value })}
+                  placeholder="Ví dụ: Dây nhảy mạng bị lỏng đầu RJ45, Switch bị tràn loopback..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700">
+                  2. Giải Pháp Khắc Phục Đã Áp Dụng <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={resolveForm.solution}
+                  onChange={(e) => setResolveForm({ ...resolveForm, solution: e.target.value })}
+                  placeholder="Ví dụ: Đã bấm lại đầu cáp mạng Cat6, cấu hình STP chống loop trên cổng Switch số 14..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowResolveModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Hủy bỏ
+                </button>
+                <Button type="submit" variant="primary" size="sm">
+                  <CheckCircle className="w-4 h-4 mr-1.5" />
+                  Xác nhận hoàn thành xử lý
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

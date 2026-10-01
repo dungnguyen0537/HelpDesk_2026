@@ -360,13 +360,42 @@ const resolveCategory = (cat) => {
   return map[cat] || cat || 'Hỗ trợ kỹ thuật';
 };
 
+// Priority Calculation Matrix according to University ITSM Specification (Section III.3)
+// Impact: BROAD (Rộng), GROUP (Nhóm), PERSONAL (Cá nhân)
+// Urgency: HIGH (Cao), MEDIUM (Trung bình), LOW (Thấp)
+export const calculatePriorityMatrix = (impact = 'PERSONAL', urgency = 'MEDIUM') => {
+  const imp = (impact || 'PERSONAL').toUpperCase();
+  const urg = (urgency || 'MEDIUM').toUpperCase();
+
+  if (imp === 'BROAD' || imp === 'WIDE' || imp === 'ALL') {
+    if (urg === 'HIGH' || urg === 'URGENT') return 'URGENT'; // P1
+    if (urg === 'MEDIUM') return 'HIGH'; // P2
+    return 'MEDIUM'; // P3
+  }
+  if (imp === 'GROUP' || imp === 'ROOM') {
+    if (urg === 'HIGH' || urg === 'URGENT') return 'HIGH'; // P2
+    if (urg === 'MEDIUM') return 'MEDIUM'; // P3
+    return 'LOW'; // P4
+  }
+  // PERSONAL / INDIVIDUAL
+  if (urg === 'HIGH' || urg === 'URGENT') return 'MEDIUM'; // P3
+  return 'LOW'; // P4
+};
+
 // Helper for Priority resolution
-const resolvePriority = (p) => {
+const resolvePriority = (p, impact, urgency) => {
+  if (impact && urgency) {
+    return calculatePriorityMatrix(impact, urgency);
+  }
   const map = {
     '1': 'LOW',
     '2': 'MEDIUM',
     '3': 'HIGH',
     '4': 'URGENT',
+    'P1': 'URGENT',
+    'P2': 'HIGH',
+    'P3': 'MEDIUM',
+    'P4': 'LOW',
     'LOW': 'LOW',
     'MEDIUM': 'MEDIUM',
     'HIGH': 'HIGH',
@@ -375,36 +404,52 @@ const resolvePriority = (p) => {
   return map[p] || 'MEDIUM';
 };
 
-// Helper to calculate SLA information based on priority
+// SLA Calculation according to ITSM Specification
+// P1: Phản hồi 15m, Giải quyết 4h
+// P2: Phản hồi 30m, Giải quyết 8h làm việc
+// P3: Phản hồi 2h làm việc, Giải quyết 3 ngày làm việc
+// P4: Phản hồi 1 ngày làm việc, Giải quyết 5 ngày làm việc
 const calculateSLA = (priority) => {
   switch (priority) {
-    case 'URGENT':
+    case 'URGENT': // P1
       return {
-        slaResolution: 'Còn 2 giờ',
-        slaRemaining: 'Còn 2 giờ',
-        slaNotice: 'Cam kết SLA: Phản hồi trong 15p - Hoàn thành trong 2h',
-        eta: '15 - 30 phút',
-      };
-    case 'HIGH':
-      return {
+        priorityCode: 'P1',
         slaResolution: 'Còn 4 giờ',
         slaRemaining: 'Còn 4 giờ',
-        slaNotice: 'Cam kết SLA: Phản hồi trong 30p - Hoàn thành trong 4h',
+        slaNotice: 'Cam kết P1: Phản hồi trong 15p - Giải quyết trong 4h',
+        firstResponseSLA: '15 phút',
+        resolutionSLA: '4 giờ',
+        eta: '15 - 30 phút',
+      };
+    case 'HIGH': // P2
+      return {
+        priorityCode: 'P2',
+        slaResolution: 'Còn 8 giờ làm việc',
+        slaRemaining: 'Còn 8 giờ làm việc',
+        slaNotice: 'Cam kết P2: Phản hồi trong 30p - Giải quyết trong 8h làm việc',
+        firstResponseSLA: '30 phút',
+        resolutionSLA: '8 giờ làm việc',
         eta: '1 - 2 giờ',
       };
-    case 'LOW':
+    case 'LOW': // P4
       return {
-        slaResolution: 'Còn 24 giờ',
-        slaRemaining: 'Còn 24 giờ',
-        slaNotice: 'Cam kết SLA: Phản hồi trong 2h - Hoàn thành trong 24h',
-        eta: 'Trong 24 giờ',
+        priorityCode: 'P4',
+        slaResolution: 'Còn 5 ngày làm việc',
+        slaRemaining: 'Còn 5 ngày làm việc',
+        slaNotice: 'Cam kết P4: Phản hồi trong 1 ngày - Giải quyết trong 5 ngày làm việc',
+        firstResponseSLA: '1 ngày làm việc',
+        resolutionSLA: '5 ngày làm việc',
+        eta: 'Trong 5 ngày',
       };
-    case 'MEDIUM':
+    case 'MEDIUM': // P3
     default:
       return {
-        slaResolution: 'Còn 8 giờ',
-        slaRemaining: 'Còn 8 giờ',
-        slaNotice: 'Cam kết SLA: Phản hồi trong 1h - Hoàn thành trong 8h',
+        priorityCode: 'P3',
+        slaResolution: 'Còn 3 ngày làm việc',
+        slaRemaining: 'Còn 3 ngày làm việc',
+        slaNotice: 'Cam kết P3: Phản hồi trong 2h làm việc - Giải quyết trong 3 ngày làm việc',
+        firstResponseSLA: '2 giờ làm việc',
+        resolutionSLA: '3 ngày làm việc',
         eta: '2 - 4 giờ làm việc',
       };
   }
@@ -418,31 +463,48 @@ export const useTicketStore = create(
       // Create a new ticket
       createTicket: (ticketData) => {
         const { time, date, iso } = getCurrentTimestamp();
-        const priority = resolvePriority(ticketData.priority || ticketData.priorityId || ticketData.urgency);
+        const impact = ticketData.impact || 'PERSONAL';
+        const urgency = ticketData.urgency || ticketData.priority || 'MEDIUM';
+        const priority = ticketData.isClassroomEmergency
+          ? 'URGENT' // Classroom Emergency elevated immediately to P1
+          : resolvePriority(ticketData.priority || ticketData.urgency, impact, urgency);
         const sla = calculateSLA(priority);
 
-        // Generate Ticket ID: TIK-2026-XXXX
+        // Generate Ticket ID: HD-2026-XXXX
         const randomNum = Math.floor(1000 + Math.random() * 9000);
-        const generatedId = `TIK-2026-${randomNum}`;
+        const generatedId = `HD-2026-00${randomNum}`;
 
         const newTicket = {
           id: generatedId,
           title: ticketData.title || 'Yêu cầu hỗ trợ kỹ thuật',
+          ticketType: ticketData.ticketType || 'INCIDENT', // INCIDENT (Sự cố), SERVICE_REQUEST, QUESTION
+          impact: impact,
+          urgencyLevel: urgency,
+          isClassroomEmergency: Boolean(ticketData.isClassroomEmergency),
           department: resolveDepartment(ticketData.department || ticketData.departmentId),
           category: resolveCategory(ticketData.category || ticketData.categoryId),
+          subCategory: ticketData.subCategory || '',
           creator: ticketData.creator || 'Người dùng hệ thống',
           creatorEmail: ticketData.creatorEmail || 'user@company.com',
           assignee: null,
           assignedTo: null,
           status: 'NEW',
           priority: priority,
+          priorityCode: sla.priorityCode,
           createdAt: iso,
           updatedAt: iso,
           slaResolution: sla.slaResolution,
           slaRemaining: sla.slaRemaining,
           slaNotice: sla.slaNotice,
+          firstResponseSLA: sla.firstResponseSLA,
+          resolutionSLA: sla.resolutionSLA,
           eta: sla.eta,
           isBreached: false,
+          reopenCount: 0,
+          resolutionReason: '',
+          solutionText: '',
+          rating: null,
+          feedback: '',
           description: ticketData.description || '',
           location: ticketData.location || 'Văn phòng làm việc',
           phone: ticketData.phone || '0912.345.678',
@@ -541,6 +603,11 @@ export const useTicketStore = create(
           tickets: state.tickets.map((ticket) => {
             if (ticket.id !== ticketId) return ticket;
 
+            const isCustomer = comment.role === 'CUSTOMER';
+            // Auto resume clock: If ticket was WAITING_USER and customer replies, switch back to IN_PROGRESS
+            const nextStatus =
+              ticket.status === 'WAITING_USER' && isCustomer ? 'IN_PROGRESS' : ticket.status;
+
             const newComment = {
               id: Date.now(),
               author: comment.author || 'Bạn (Quản Trị / Kỹ Thuật)',
@@ -557,15 +624,125 @@ export const useTicketStore = create(
                 id: Date.now(),
                 time,
                 date,
-                content: `${comment.isInternal ? 'Thêm ghi chú nội bộ' : 'Thêm phản hồi'} bởi ${newComment.author}`,
+                content: `${comment.isInternal ? 'Thêm ghi chú nội bộ' : 'Thêm phản hồi'} bởi ${newComment.author}${
+                  ticket.status === 'WAITING_USER' && isCustomer ? ' (Đã mở lại đồng hồ xử lý -> Đang xử lý)' : ''
+                }`,
                 type: 'comment',
               },
             ];
 
             return {
               ...ticket,
+              status: nextStatus,
               updatedAt: iso,
               comments: [...(ticket.comments || []), newComment],
+              history: updatedHistory,
+            };
+          }),
+        }));
+      },
+
+      // Resolve ticket with mandatory cause and solution
+      resolveTicket: (ticketId, resolutionReason, solutionText) => {
+        const { time, date, iso } = getCurrentTimestamp();
+
+        set((state) => ({
+          tickets: state.tickets.map((ticket) => {
+            if (ticket.id !== ticketId) return ticket;
+
+            const updatedHistory = [
+              ...(ticket.history || []),
+              {
+                id: Date.now(),
+                time,
+                date,
+                content: `Đánh dấu đã giải quyết. Nguyên nhân: ${resolutionReason || 'Đã kiểm tra'}. Giải pháp: ${solutionText || 'Đã khắc phục'}`,
+                type: 'status',
+              },
+            ];
+
+            return {
+              ...ticket,
+              status: 'RESOLVED',
+              resolutionReason: resolutionReason || ticket.resolutionReason,
+              solutionText: solutionText || ticket.solutionText,
+              updatedAt: iso,
+              slaResolution: 'Đạt SLA',
+              slaRemaining: 'Đạt SLA',
+              isBreached: false,
+              history: updatedHistory,
+            };
+          }),
+        }));
+      },
+
+      // Customer Reopen Ticket (Max 2 times, on 3rd escalate to Manager)
+      reopenTicket: (ticketId, reason) => {
+        const { time, date, iso } = getCurrentTimestamp();
+
+        set((state) => ({
+          tickets: state.tickets.map((ticket) => {
+            if (ticket.id !== ticketId) return ticket;
+
+            const currentReopenCount = (ticket.reopenCount || 0) + 1;
+            const isEscalated = currentReopenCount >= 3;
+
+            const contentLog = isEscalated
+              ? `Khách hàng mở lại lần ${currentReopenCount}. Vượt giới hạn 2 lần! Hệ thống tự động chuyển lên Quản lý can thiệp. Lý do: ${reason}`
+              : `Khách hàng mở lại phiếu lần ${currentReopenCount}/2. Lý do: ${reason}`;
+
+            const updatedHistory = [
+              ...(ticket.history || []),
+              {
+                id: Date.now(),
+                time,
+                date,
+                content: contentLog,
+                type: 'status',
+              },
+            ];
+
+            return {
+              ...ticket,
+              status: 'IN_PROGRESS',
+              reopenCount: currentReopenCount,
+              priority: isEscalated ? 'URGENT' : ticket.priority,
+              priorityCode: isEscalated ? 'P1' : ticket.priorityCode,
+              isEscalatedToManager: isEscalated,
+              updatedAt: iso,
+              slaResolution: 'Đã tính lại hạn xử lý',
+              slaRemaining: 'Đang theo dõi',
+              history: updatedHistory,
+            };
+          }),
+        }));
+      },
+
+      // Rate ticket and submit CSAT feedback
+      rateTicket: (ticketId, rating, feedback) => {
+        const { time, date, iso } = getCurrentTimestamp();
+
+        set((state) => ({
+          tickets: state.tickets.map((ticket) => {
+            if (ticket.id !== ticketId) return ticket;
+
+            const updatedHistory = [
+              ...(ticket.history || []),
+              {
+                id: Date.now(),
+                time,
+                date,
+                content: `Khách hàng đánh giá chất lượng ${rating} sao: "${feedback || 'Không có nhận xét'}"`,
+                type: 'rating',
+              },
+            ];
+
+            return {
+              ...ticket,
+              status: 'CLOSED',
+              rating: rating,
+              feedback: feedback || '',
+              updatedAt: iso,
               history: updatedHistory,
             };
           }),
