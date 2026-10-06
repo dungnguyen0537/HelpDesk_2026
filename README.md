@@ -168,6 +168,11 @@ Toàn bộ CSDL được quản lý phiên bản tự động bằng Flyway (`V1
 13. **`knowledge_base`**: Bài viết giải pháp kỹ thuật, câu hỏi thường gặp FAQ, số lượt xem.
 14. **`notifications`**: Thông báo đẩy nội bộ cho người dùng qua Web và WebSocket.
 
+> **Tệp tin CSDL nguồn**: Toàn bộ script khởi tạo cấu trúc 14 bảng, ràng buộc khóa ngoại, indexes và dữ liệu mẫu (seed data) đã được đóng gói sẵn tại thư mục gốc của repository: [`helpdesk_db.sql`](helpdesk_db.sql). Có thể import trực tiếp vào PostgreSQL bằng lệnh:
+> ```bash
+> psql -U helpdesk_user -d helpdesk_db -f helpdesk_db.sql
+> ```
+
 ---
 
 ## 6. Hệ Thống RESTful API & WebSocket
@@ -414,14 +419,10 @@ Hệ thống đã nạp sẵn dữ liệu mẫu phục vụ kiểm thử và đ�
 > **QUY TẮC BẮT BUỘC CỦA DỰ ÁN**: Mỗi khi mã nguồn hoặc tính năng được cải tiến, bổ sung hay chỉnh sửa, tệp `README.md` này **bắt buộc phải được cập nhật đồng thời** để phản ánh chính xác nhất hiện trạng kỹ thuật của hệ thống.
 
 ### Lịch Sử Phiên Bản (Release History):
-* **v2.6.4 (2026-09-27)**:
-  - **Khắc phục triệt để lỗi hiển thị nội dung bài viết Cơ sở tri thức (Markdown Parser & Visual Formatter)**:
-    + Xây dựng bộ phân tích cú pháp `renderArticleBody` chuyên dụng xử lý Markdown hoàn chỉnh từng dòng.
-    + Khắc phục hiện tượng văn bản dính liền thành một khối và lộ ký tự cú pháp: Tự động bóc tách và định dạng in đậm `**text**` thành `<strong>`, mã nội dòng `` `code` `` thành khối code chuyên nghiệp.
-    + Định dạng danh sách có thứ tự `1.`, `2.` thành các huy hiệu số tròn nổi bật (`rounded-full bg-primary-100 text-primary-700`).
-    + Định dạng danh sách gạch đầu dòng `-`, `*` thành các điểm chấm màu xanh nhận diện trực quan.
-    + Định dạng tiêu đề cấp 3 `###` thành các thanh phân tách phân mục trang trọng có viền gạch dưới.
-    + Đóng gói khung lệnh Terminal nền đen viền kim loại cho các khối mã nguồn nhiều dòng ````bash````.
+* **v2.7.1 (2026-10-06)**:
+  - **Đóng gói & Cung Cấp Tệp Tin CSDL Nguồn Tại Thư Mục Gốc (`helpdesk_db.sql`)**:
+    + Tổng hợp toàn vẹn cấu trúc 14 bảng quan hệ PostgreSQL, các ràng buộc toàn vẹn khóa chính/khóa ngoại, các chỉ mục (indexes) tối ưu hóa truy vấn và bộ dữ liệu hạt giống (seed data) mẫu.
+    + Cho phép quản trị viên hoặc giảng viên chấm điểm khởi tạo cơ sở dữ liệu ngay lập tức với 1 lệnh đơn `psql -f helpdesk_db.sql`.
 * **v2.7.0 (2026-09-27)**:
   - **Triển khai Chuẩn Hóa Toàn Diện Quy Trình Nghiệp Vụ ITSM Đại Học & Trường Học**:
     + **4 Tác nhân chính**: Người dùng (Sinh viên, Giảng viên, Cán bộ), Nhân viên giải quyết (Kỹ thuật viên CNTT), Quản lý (Trưởng bộ phận) và Admin.
