@@ -419,6 +419,28 @@ Hệ thống đã nạp sẵn dữ liệu mẫu phục vụ kiểm thử và đ�
 > **QUY TẮC BẮT BUỘC CỦA DỰ ÁN**: Mỗi khi mã nguồn hoặc tính năng được cải tiến, bổ sung hay chỉnh sửa, tệp `README.md` này **bắt buộc phải được cập nhật đồng thời** để phản ánh chính xác nhất hiện trạng kỹ thuật của hệ thống.
 
 ### Lịch Sử Phiên Bản (Release History):
+* **v2.8.0 (2026-10-13)**:
+  - **Hoàn Thiện Hệ Thống Quản Trị Nhân Sự & Xác Thực Vận Hành Doanh Nghiệp Thực Tế (Enterprise Operational Production-Ready)**:
+    + **Kho Lưu Trữ Dữ Liệu Nhân Sự Tập Trung & Bền Vững (`userStore.js`)**:
+      * Quản lý danh mục nhân sự toàn doanh nghiệp lưu trữ liên tục qua LocalStorage (`helpdesk_users_store`).
+      * Tích hợp sẵn 8 tài khoản nhân sự thực tế theo phòng ban: Admin quản trị, Quản lý điều phối, Kỹ thuật viên IT Support các cấp, và Nhân viên thuộc Kế toán, Nhân sự, Kinh doanh.
+      * Định danh nhân sự theo Mã nhân viên chuẩn doanh nghiệp (`EMP-xxxx`), Email cơ quan (`@doanhnghiep.vn`), phân quyền chức vụ rõ ràng.
+    + **Cơ Chế Xác Thực Đa Thức & Bảo Mật Hoạt Động (Production Authentication Flow)**:
+      * Trang Đăng nhập (`LoginPage.jsx`) hỗ trợ đăng nhập linh hoạt bằng Tên đăng nhập, Email doanh nghiệp hoặc Mã nhân viên.
+      * Tự động kiểm tra trạng thái hoạt động của tài khoản: Khóa tức thì các tài khoản bị đình chỉ hoạt động (`isActive: false`) với thông báo bảo mật rõ ràng.
+      * Loại bỏ nút bấm giả lập thử nghiệm; thay bằng ngăn kéo thông tin ca trực nội bộ chuyên nghiệp.
+    + **Quy Trình Tiếp Nhận Nhân Viên Mới (Employee Onboarding Registration)**:
+      * Nâng cấp trang Đăng ký (`RegisterPage.jsx`) thành biểu mẫu tiếp nhận nhân sự nội bộ: Bắt buộc Mã nhân viên, Họ tên, Email cơ quan, Số máy nội bộ và Phòng ban công tác.
+      * Tự động khởi tạo và đồng bộ tài khoản mới vào cơ sở dữ liệu nhân sự, cho phép đăng nhập vận hành ngay lập tức.
+    + **Bảng Điều Khiển Quản Trị Người Dùng Toàn Diện (`AdminUsersPage.jsx`)**:
+      * Thống kê 5 chỉ số nhân sự thời gian thực: Tổng nhân sự, Đang hoạt động, Đội ngũ kỹ thuật viên, Quản lý/Admin, và Tài khoản tạm khóa.
+      * Bộ lọc đa tiêu chí thời gian thực: Tìm kiếm tức thì theo Tên, Email, Username, Mã nhân viên; Lọc theo Vai trò, Phòng ban và Trạng thái.
+      * Đầy đủ chức năng CRUD: Thêm nhân sự mới, Điều chỉnh chức vụ/phòng ban, Khóa/Mở khóa tài khoản tức thời, Đặt lại mật khẩu (Reset Password).
+    + **Tự Phục Vụ Hồ Sơ & Đổi Mật Khẩu Cá Nhân (`ProfilePage.jsx`)**:
+      * Cho phép nhân viên cập nhật thông tin liên lạc cá nhân, đồng bộ trực tiếp vào phiên làm việc và kho dữ liệu.
+      * Quy trình đổi mật khẩu an toàn: Xác thực mật khẩu hiện tại trước khi cập nhật mật khẩu mới.
+    + **Điều Phối Kỹ Thuật Viên Động Theo Nhân Sự Thực Tế (`TicketDetailPage.jsx`)**:
+      * Hộp chọn phân công kỹ thuật viên tự động lọc danh sách nhân viên kỹ thuật đang hoạt động (`isActive: true` thuộc vai trò `AGENT`, `MANAGER`, `ADMIN`), không còn phụ thuộc vào dữ liệu gán cứng.
 * **v2.7.1 (2026-10-06)**:
   - **Đóng gói & Cung Cấp Tệp Tin CSDL Nguồn Tại Thư Mục Gốc (`helpdesk_db.sql`)**:
     + Tổng hợp toàn vẹn cấu trúc 14 bảng quan hệ PostgreSQL, các ràng buộc toàn vẹn khóa chính/khóa ngoại, các chỉ mục (indexes) tối ưu hóa truy vấn và bộ dữ liệu hạt giống (seed data) mẫu.

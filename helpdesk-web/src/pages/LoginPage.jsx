@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Headphones, Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react';
+import { Headphones, Mail, Lock, AlertCircle, ArrowRight, ShieldCheck, UserCheck, KeyRound, ChevronDown } from 'lucide-react';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import { useAuthStore } from '../store/authStore';
+import { useUserStore } from '../store/userStore';
 import { authApi } from '../api/authApi';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
+  const authenticate = useUserStore((state) => state.authenticate);
 
   const [formData, setFormData] = useState({
     usernameOrEmail: 'admin',
@@ -18,6 +20,7 @@ export default function LoginPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showDemoAccounts, setShowDemoAccounts] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -33,38 +36,15 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Mock / Real API login integration
-      let response;
+      // 1. Thử xác thực với Backend API nếu có
+      let response = null;
       try {
         response = await authApi.login({
           usernameOrEmail: formData.usernameOrEmail,
           password: formData.password,
         });
-      } catch (err) {
-        // Fallback demo mock if backend isn't booted yet
-        const roleMap = {
-          customer: { role: 'CUSTOMER', name: 'Nguyễn Văn An (Người Dùng / Khách Hàng)', dept: 'Phòng Marketing' },
-          agent: { role: 'AGENT', name: 'Trần Văn Bình (Kỹ Thuật Viên Hỗ Trợ)', dept: 'Tổ Hỗ Trợ Kỹ Thuật' },
-          manager: { role: 'MANAGER', name: 'Lê Thị Cúc (Điều Phối Viên / Quản Lý)', dept: 'Trung Tâm Dịch Vụ Service Desk' },
-          admin: { role: 'ADMIN', name: 'Quản Trị Viên Hệ Thống', dept: 'Bộ Phận IT Toàn Hệ Thống' },
-        };
-        const selected = roleMap[formData.usernameOrEmail.toLowerCase()] || {
-          role: 'CUSTOMER',
-          name: formData.usernameOrEmail,
-          dept: 'Người Dùng Doanh Nghiệp',
-        };
-
-        response = {
-          token: 'mock-jwt-token-helpdesk-enterprise-2026',
-          user: {
-            id: 1,
-            username: formData.usernameOrEmail,
-            email: formData.usernameOrEmail.includes('@') ? formData.usernameOrEmail : `${formData.usernameOrEmail}@company.com`,
-            fullName: selected.name,
-            role: selected.role,
-            department: selected.dept,
-          },
-        };
+      } catch (apiErr) {
+        // Backend chưa sẵn sàng, dùng hệ thống xác thực nội bộ userStore
       }
 
       if (response && response.token) {
@@ -74,11 +54,26 @@ export default function LoginPage() {
         } else {
           navigate('/dashboard');
         }
+        return;
+      }
+
+      // 2. Xác thực thời gian thực qua cơ sở dữ liệu tài khoản nội bộ userStore
+      const authResult = authenticate(formData.usernameOrEmail, formData.password);
+
+      if (!authResult.success) {
+        setErrorMsg(authResult.message);
+        return;
+      }
+
+      login(authResult.user, authResult.token);
+
+      if (authResult.user.role === 'CUSTOMER') {
+        navigate('/portal');
       } else {
-        setErrorMsg('Tên đăng nhập hoặc mật khẩu không chính xác.');
+        navigate('/dashboard');
       }
     } catch (err) {
-      setErrorMsg(err?.response?.data?.message || 'Đăng nhập không thành công. Vui lòng thử lại.');
+      setErrorMsg(err?.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.');
     } finally {
       setIsLoading(false);
     }
@@ -162,97 +157,113 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Quick Demo Credentials for all Roles */}
-          <div className="mt-6 pt-4 border-t border-slate-100 bg-slate-50/80 rounded-xl p-3.5 text-xs text-slate-600">
-            <p className="font-semibold text-slate-700 mb-2 text-center text-xs">
-              Chọn vai trò trải nghiệm hệ thống:
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({ usernameOrEmail: 'customer', password: 'password123', rememberMe: true });
-                }}
-                className={`p-2 rounded-lg border text-left transition-all ${
-                  formData.usernameOrEmail === 'customer'
-                    ? 'border-primary-500 bg-primary-50/70 text-primary-900 font-semibold shadow-xs'
-                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                }`}
-              >
-                <div className="font-medium text-[11px] flex items-center justify-between">
-                  <span>Người dùng / Khách</span>
-                  <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded font-mono">USER</span>
-                </div>
-                <div className="text-[10px] text-slate-500 truncate mt-0.5">Tạo và theo dõi yêu cầu</div>
-              </button>
+          {/* Enterprise Pre-configured Test Accounts (Collapsible) */}
+          <div className="mt-6 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setShowDemoAccounts(!showDemoAccounts)}
+              className="w-full flex items-center justify-between text-xs text-slate-500 hover:text-slate-800 transition-colors py-1"
+            >
+              <span className="flex items-center space-x-1.5 font-medium">
+                <KeyRound className="w-3.5 h-3.5 text-primary-500" />
+                <span>Tài khoản mẫu theo ca trực (Nội bộ doanh nghiệp)</span>
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showDemoAccounts ? 'rotate-180' : ''}`} />
+            </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({ usernameOrEmail: 'agent', password: 'password123', rememberMe: true });
-                }}
-                className={`p-2 rounded-lg border text-left transition-all ${
-                  formData.usernameOrEmail === 'agent'
-                    ? 'border-primary-500 bg-primary-50/70 text-primary-900 font-semibold shadow-xs'
-                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                }`}
-              >
-                <div className="font-medium text-[11px] flex items-center justify-between">
-                  <span>Kỹ thuật viên IT</span>
-                  <span className="text-[9px] bg-blue-100 text-blue-700 px-1 rounded font-mono">AGENT</span>
-                </div>
-                <div className="text-[10px] text-slate-500 truncate mt-0.5">Tiếp nhận và xử lý sự cố</div>
-              </button>
+            {showDemoAccounts && (
+              <div className="mt-3 bg-slate-50 rounded-xl p-3 border border-slate-200/80 space-y-2 text-xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ usernameOrEmail: 'customer', password: 'password123', rememberMe: true });
+                    }}
+                    className={`p-2 rounded-lg border text-left transition-all ${
+                      formData.usernameOrEmail === 'customer'
+                        ? 'border-primary-500 bg-primary-50 text-primary-900 font-semibold'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="font-semibold text-[11px] flex items-center justify-between">
+                      <span>Cán bộ / Nhân viên</span>
+                      <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 rounded font-mono">USER</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 truncate">trang.nt@doanhnghiep.vn</div>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({ usernameOrEmail: 'manager', password: 'password123', rememberMe: true });
-                }}
-                className={`p-2 rounded-lg border text-left transition-all ${
-                  formData.usernameOrEmail === 'manager'
-                    ? 'border-primary-500 bg-primary-50/70 text-primary-900 font-semibold shadow-xs'
-                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                }`}
-              >
-                <div className="font-medium text-[11px] flex items-center justify-between">
-                  <span>Quản lý / Điều phối</span>
-                  <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded font-mono">MANAGER</span>
-                </div>
-                <div className="text-[10px] text-slate-500 truncate mt-0.5">Điều phối và báo cáo SLA</div>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ usernameOrEmail: 'agent', password: 'password123', rememberMe: true });
+                    }}
+                    className={`p-2 rounded-lg border text-left transition-all ${
+                      formData.usernameOrEmail === 'agent'
+                        ? 'border-primary-500 bg-primary-50 text-primary-900 font-semibold'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="font-semibold text-[11px] flex items-center justify-between">
+                      <span>Kỹ thuật viên IT</span>
+                      <span className="text-[9px] bg-blue-100 text-blue-700 px-1 rounded font-mono">AGENT</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 truncate">binh.tv@doanhnghiep.vn</div>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({ usernameOrEmail: 'admin', password: 'password123', rememberMe: true });
-                }}
-                className={`p-2 rounded-lg border text-left transition-all ${
-                  formData.usernameOrEmail === 'admin'
-                    ? 'border-primary-500 bg-primary-50/70 text-primary-900 font-semibold shadow-xs'
-                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                }`}
-              >
-                <div className="font-medium text-[11px] flex items-center justify-between">
-                  <span>Quản trị viên</span>
-                  <span className="text-[9px] bg-purple-100 text-purple-700 px-1 rounded font-mono">ADMIN</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ usernameOrEmail: 'manager', password: 'password123', rememberMe: true });
+                    }}
+                    className={`p-2 rounded-lg border text-left transition-all ${
+                      formData.usernameOrEmail === 'manager'
+                        ? 'border-primary-500 bg-primary-50 text-primary-900 font-semibold'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="font-semibold text-[11px] flex items-center justify-between">
+                      <span>Trưởng phòng IT / Quản lý</span>
+                      <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded font-mono">MANAGER</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 truncate">cuc.lt@doanhnghiep.vn</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ usernameOrEmail: 'admin', password: 'password123', rememberMe: true });
+                    }}
+                    className={`p-2 rounded-lg border text-left transition-all ${
+                      formData.usernameOrEmail === 'admin'
+                        ? 'border-primary-500 bg-primary-50 text-primary-900 font-semibold'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="font-semibold text-[11px] flex items-center justify-between">
+                      <span>Quản trị viên Hệ thống</span>
+                      <span className="text-[9px] bg-purple-100 text-purple-700 px-1 rounded font-mono">ADMIN</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5 truncate">admin@doanhnghiep.vn</div>
+                  </button>
                 </div>
-                <div className="text-[10px] text-slate-500 truncate mt-0.5">Cấu hình toàn bộ hệ thống</div>
-              </button>
-            </div>
+                <p className="text-[10px] text-slate-400 text-center italic pt-1">
+                  Mật khẩu mặc định: password123. Hoặc sử dụng tài khoản bạn tự tạo trong phân hệ Quản trị.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Register Link */}
           <p className="mt-6 text-center text-xs text-slate-500">
-            Chưa có tài khoản khách hàng?{' '}
+            Cán bộ nhân viên mới chưa có tài khoản?{' '}
             <Link to="/register" className="font-semibold text-primary-600 hover:text-primary-700 hover:underline">
-              Đăng ký ngay
+              Đăng ký tài khoản nội bộ
             </Link>
           </p>
         </div>
 
         <p className="text-center text-[11px] text-slate-400 mt-6">
-          © 2026 HelpDesk Service Portal. Tiêu chuẩn SLA & ISO 20000.
+          © 2026 HelpDesk Service Portal. Tiêu chuẩn SLA & ISO/IEC 20000.
         </p>
       </div>
     </div>

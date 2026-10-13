@@ -23,17 +23,9 @@ import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
 import { useTicketStore } from '../store/ticketStore';
 import { useAuthStore } from '../store/authStore';
+import { useUserStore } from '../store/userStore';
 import { TICKET_STATUS, TICKET_PRIORITY } from '../utils/constants';
 import { formatDate } from '../utils/formatters';
-
-const TECHNICIAN_OPTIONS = [
-  { value: 'Lê Văn Cường', label: 'Lê Văn Cường (Senior Network)' },
-  { value: 'Trần Thị Bích', label: 'Trần Thị Bích (System Admin)' },
-  { value: 'Trần Văn Bình', label: 'Trần Văn Bình (Desktop Support)' },
-  { value: 'Phạm Thị Lan', label: 'Phạm Thị Lan (ERP Specialist)' },
-  { value: 'Lê Thị Cúc', label: 'Lê Thị Cúc (Quản Lý Dịch Vụ)' },
-  { value: 'Nguyễn Văn Hùng', label: 'Nguyễn Văn Hùng (Kỹ Thuật Viên IT)' },
-];
 
 export default function TicketDetailPage() {
   const { id } = useParams();
@@ -41,6 +33,15 @@ export default function TicketDetailPage() {
 
   const { tickets, updateTicketStatus, assignTicket, addComment, resolveTicket } = useTicketStore();
   const { user } = useAuthStore();
+  const allUsers = useUserStore((state) => state.users);
+
+  // Dynamic list of active technicians and managers from userStore
+  const dynamicTechnicians = allUsers
+    .filter((u) => u.isActive && (u.role === 'AGENT' || u.role === 'MANAGER' || u.role === 'ADMIN'))
+    .map((u) => ({
+      value: u.fullName,
+      label: `${u.fullName} (${u.role === 'ADMIN' ? 'Admin' : u.role === 'MANAGER' ? 'Quản Lý' : 'Kỹ Thuật'})`,
+    }));
 
   const [activeCommentTab, setActiveCommentTab] = useState('PUBLIC'); // 'PUBLIC' or 'INTERNAL'
   const [commentText, setCommentText] = useState('');
@@ -428,13 +429,13 @@ export default function TicketDetailPage() {
                   className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
                   <option value="">-- Chưa phân công --</option>
-                  {TECHNICIAN_OPTIONS.map((tech) => (
+                  {dynamicTechnicians.map((tech) => (
                     <option key={tech.value} value={tech.value}>
                       {tech.label}
                     </option>
                   ))}
                   {ticket.assignee &&
-                    !TECHNICIAN_OPTIONS.some((t) => t.value === ticket.assignee) && (
+                    !dynamicTechnicians.some((t) => t.value === ticket.assignee) && (
                       <option value={ticket.assignee}>{ticket.assignee}</option>
                     )}
                 </select>

@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Headphones, Mail, Lock, User, Phone, Building, AlertCircle, ArrowRight } from 'lucide-react';
+import { Headphones, Mail, Lock, User, Phone, Building, AlertCircle, ArrowRight, CheckCircle2, BadgeCheck } from 'lucide-react';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import { authApi } from '../api/authApi';
+import { useUserStore } from '../store/userStore';
+
+const DEPARTMENT_MAP = {
+  '1': 'IT Operations & Hạ Tầng Mạng',
+  '2': 'Phát Triển Phần Mềm & ERP',
+  '3': 'Hành Chính & Nhân Sự (HR)',
+  '4': 'Kế Toán & Tài Chính',
+  '5': 'Marketing & Phát Triển Thị Trường',
+};
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const addUser = useUserStore((state) => state.addUser);
 
   const [formData, setFormData] = useState({
     fullName: '',
+    employeeId: '',
     username: '',
     email: '',
     phoneNumber: '',
@@ -36,19 +47,27 @@ export default function RegisterPage() {
     setErrorMsg('');
     setSuccessMsg('');
 
+    if (formData.password.length < 6) {
+      setErrorMsg('Mật khẩu phải có tối thiểu 6 ký tự.');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setErrorMsg('Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.');
       return;
     }
 
     if (!formData.acceptTerms) {
-      setErrorMsg('Bạn cần đồng ý với điều khoản sử dụng của hệ thống.');
+      setErrorMsg('Bạn cần đồng ý với nội quy sử dụng hệ thống IT HelpDesk.');
       return;
     }
 
     setIsLoading(true);
 
     try {
+      const departmentName = DEPARTMENT_MAP[formData.departmentId] || 'Phòng Ban Doanh Nghiệp';
+
+      // 1. Thử gửi lên API nếu Backend sẵn sàng
       try {
         await authApi.register({
           fullName: formData.fullName,
@@ -59,15 +78,35 @@ export default function RegisterPage() {
           password: formData.password,
         });
       } catch (err) {
-        // Mock fallback if api is down
+        // Tiếp tục lưu vào kho dữ liệu userStore
       }
 
-      setSuccessMsg('Đăng ký tài khoản thành công! Đang chuyển hướng sang đăng nhập...');
+      // 2. Lưu trực tiếp vào userStore nội bộ
+      const result = addUser({
+        fullName: formData.fullName,
+        employeeId: formData.employeeId || `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
+        username: formData.username,
+        email: formData.email,
+        phone: formData.phoneNumber,
+        department: departmentName,
+        departmentId: Number(formData.departmentId),
+        password: formData.password,
+        role: 'CUSTOMER',
+        isActive: true,
+      });
+
+      if (!result.success) {
+        setErrorMsg(result.message);
+        setIsLoading(false);
+        return;
+      }
+
+      setSuccessMsg('Đăng ký tài khoản thành công! Bạn có thể dùng tài khoản này để đăng nhập ngay bây giờ.');
       setTimeout(() => {
         navigate('/login');
-      }, 1500);
+      }, 1800);
     } catch (err) {
-      setErrorMsg(err?.response?.data?.message || 'Đăng ký không thành công. Hãy thử lại.');
+      setErrorMsg(err?.message || 'Đăng ký không thành công. Hãy thử lại.');
     } finally {
       setIsLoading(false);
     }
@@ -108,15 +147,27 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Họ và tên"
+                label="Họ và tên cán bộ / nhân viên"
                 name="fullName"
                 type="text"
                 required
-                placeholder="Nguyễn Văn A"
+                placeholder="Ví dụ: Nguyễn Văn An"
                 icon={User}
                 value={formData.fullName}
                 onChange={handleChange}
               />
+              <Input
+                label="Mã nhân viên (Employee ID)"
+                name="employeeId"
+                type="text"
+                placeholder="Ví dụ: EMP-0215 (Tùy chọn)"
+                icon={BadgeCheck}
+                value={formData.employeeId}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="Tên đăng nhập"
                 name="username"
@@ -127,21 +178,21 @@ export default function RegisterPage() {
                 value={formData.username}
                 onChange={handleChange}
               />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Email công ty"
+                label="Email công ty / Đơn vị"
                 name="email"
                 type="email"
                 required
-                placeholder="a.nguyen@company.com"
+                placeholder="an.nv@doanhnghiep.vn"
                 icon={Mail}
                 value={formData.email}
                 onChange={handleChange}
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                label="Số điện thoại"
+                label="Số điện thoại liên hệ"
                 name="phoneNumber"
                 type="tel"
                 placeholder="0912 345 678"
@@ -149,28 +200,29 @@ export default function RegisterPage() {
                 value={formData.phoneNumber}
                 onChange={handleChange}
               />
-            </div>
 
-            {/* Department Selection */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Phòng ban / Đơn vị <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                  <Building className="w-4 h-4" />
+              {/* Department Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Phòng ban / Đơn vị trực thuộc <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <Building className="w-4 h-4" />
+                  </div>
+                  <select
+                    name="departmentId"
+                    value={formData.departmentId}
+                    onChange={handleChange}
+                    className="block w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="1">IT Operations & Hạ Tầng Mạng</option>
+                    <option value="2">Phát Triển Phần Mềm & ERP</option>
+                    <option value="3">Hành Chính & Nhân Sự (HR)</option>
+                    <option value="4">Kế Toán & Tài Chính</option>
+                    <option value="5">Marketing & Phát Triển Thị Trường</option>
+                  </select>
                 </div>
-                <select
-                  name="departmentId"
-                  value={formData.departmentId}
-                  onChange={handleChange}
-                  className="block w-full pl-9 pr-3 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="1">Kinh doanh & Bán hàng (Sales & Marketing)</option>
-                  <option value="2">Kế toán & Tài chính (Accounting & Finance)</option>
-                  <option value="3">Hành chính & Nhân sự (HR & Admin)</option>
-                  <option value="4">Phát triển Sản phẩm (R&D / Tech)</option>
-                </select>
               </div>
             </div>
 
