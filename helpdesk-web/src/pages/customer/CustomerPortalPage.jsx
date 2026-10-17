@@ -85,17 +85,24 @@ export default function CustomerPortalPage() {
     }
   };
 
-  // User's Active Tickets (from global store)
+  // User's Active Tickets (from global store) - ONLY tickets created by this specific user
   const myTickets = (allTickets || [])
     .filter((t) => {
-      if (!user) return true;
-      return (
-        t.creator === user.fullName ||
-        t.creatorEmail === user.email ||
-        t.requester === user.fullName ||
-        user.role === 'ADMIN' ||
-        user.role === 'CUSTOMER'
-      );
+      if (!user) return false;
+      const userEmail = (user.email || '').toLowerCase().trim();
+      const userName = (user.fullName || '').toLowerCase().trim();
+      const userUsername = (user.username || '').toLowerCase().trim();
+
+      const tEmail = (t.creatorEmail || '').toLowerCase().trim();
+      const tCreator = (t.creator || '').toLowerCase().trim();
+      const tRequester = (t.requester || '').toLowerCase().trim();
+      const tUsername = (t.creatorUsername || '').toLowerCase().trim();
+
+      if (userEmail && tEmail && tEmail === userEmail) return true;
+      if (userUsername && tUsername && tUsername === userUsername) return true;
+      if (userName && tCreator && tCreator.includes(userName)) return true;
+      if (userName && tRequester && tRequester.includes(userName)) return true;
+      return false;
     })
     .slice(0, 5)
     .map((t) => {
@@ -248,50 +255,71 @@ export default function CustomerPortalPage() {
           </div>
 
           <div className="space-y-3">
-            {myTickets.map((t) => (
-              <div
-                key={t.id}
-                onClick={() => navigate(`/tickets/${t.id}`)}
-                className="bg-white rounded-2xl p-5 border border-slate-200 hover:border-primary-300 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
-              >
-                <div className="space-y-2 max-w-2xl">
-                  <div className="flex items-center space-x-2 text-xs">
-                    <span className="font-mono font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded">
-                      {t.id}
-                    </span>
-                    <span className="text-slate-400">•</span>
-                    <span className="text-slate-500">{t.category}</span>
-                    <span className="text-slate-400">•</span>
-                    <span className="text-slate-400">{t.createdAt}</span>
+            {myTickets.length > 0 ? (
+              myTickets.map((t) => (
+                <div
+                  key={t.id}
+                  onClick={() => navigate(`/tickets/${t.id}`)}
+                  className="bg-white rounded-2xl p-5 border border-slate-200 hover:border-primary-300 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div className="space-y-2 max-w-2xl">
+                    <div className="flex items-center space-x-2 text-xs">
+                      <span className="font-mono font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded">
+                        {t.id}
+                      </span>
+                      <span className="text-slate-400">•</span>
+                      <span className="text-slate-500">{t.category}</span>
+                      <span className="text-slate-400">•</span>
+                      <span className="text-slate-400">{t.createdAt}</span>
+                    </div>
+
+                    <h3 className="font-bold text-slate-900 text-sm hover:text-primary-600 transition-colors">
+                      {t.title}
+                    </h3>
+
+                    <div className="flex items-center space-x-3 text-xs text-slate-500">
+                      <span className="flex items-center space-x-1">
+                        <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Người phụ trách: <strong>{t.agent}</strong></span>
+                      </span>
+                      <span className="text-slate-300">|</span>
+                      <span className="flex items-center space-x-1 text-slate-600 font-medium">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        <span>{t.eta}</span>
+                      </span>
+                    </div>
                   </div>
 
-                  <h3 className="font-bold text-slate-900 text-sm hover:text-primary-600 transition-colors">
-                    {t.title}
-                  </h3>
-
-                  <div className="flex items-center space-x-3 text-xs text-slate-500">
-                    <span className="flex items-center space-x-1">
-                      <UserCheck className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Người phụ trách: <strong>{t.agent}</strong></span>
+                  <div className="flex items-center justify-between md:justify-end space-x-4 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${t.statusColor}`}>
+                      {t.statusLabel}
                     </span>
-                    <span className="text-slate-300">|</span>
-                    <span className="flex items-center space-x-1 text-slate-600 font-medium">
-                      <Clock className="w-3.5 h-3.5 text-amber-500" />
-                      <span>{t.eta}</span>
-                    </span>
+                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-primary-50 hover:text-primary-600 transition-colors">
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
                   </div>
                 </div>
-
-                <div className="flex items-center justify-between md:justify-end space-x-4 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${t.statusColor}`}>
-                    {t.statusLabel}
-                  </span>
-                  <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-primary-50 hover:text-primary-600 transition-colors">
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
+              ))
+            ) : (
+              <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                  <Clock className="w-6 h-6" />
                 </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-slate-800 text-sm">Bạn chưa có yêu cầu hỗ trợ nào gần đây</h4>
+                  <p className="text-xs text-slate-500">
+                    Khi bạn gửi yêu cầu hỗ trợ kỹ thuật, tiến độ xử lý và cam kết SLA sẽ hiển thị tại đây.
+                  </p>
+                </div>
+                <Link
+                  to="/portal/create-ticket"
+                  className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold shadow-xs transition-colors"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Tạo yêu cầu mới ngay</span>
+                </Link>
               </div>
-            ))}
+            )}
           </div>
         </section>
 

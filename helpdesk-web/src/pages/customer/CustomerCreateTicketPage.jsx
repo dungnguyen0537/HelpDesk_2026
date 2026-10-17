@@ -210,8 +210,9 @@ export default function CustomerCreateTicketPage() {
     const selectedCategoryObj = categories.find((c) => c.id === formData.category);
     const categoryName = selectedCategoryObj ? selectedCategoryObj.name : 'Mạng LAN & Wi-Fi';
 
-    const creatorName = user ? `${user.fullName} (${user.department || 'Người dùng'})` : 'Nguyễn Thu Trang (Khoa CNTT)';
-    const creatorEmail = user?.email || 'customer@truong.edu.vn';
+    const creatorName = user?.fullName || 'Người dùng';
+    const creatorEmail = user?.email || '';
+    const creatorUsername = user?.username || '';
 
     const newTicket = createTicket({
       title: formData.title,
@@ -227,6 +228,8 @@ export default function CustomerCreateTicketPage() {
       phone: formData.phone,
       creator: creatorName,
       creatorEmail: creatorEmail,
+      creatorUsername: creatorUsername,
+      requester: creatorName,
       attachments: attachments,
     });
 

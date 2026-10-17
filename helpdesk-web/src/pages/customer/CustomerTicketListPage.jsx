@@ -45,16 +45,27 @@ export default function CustomerTicketListPage() {
   const [cancelModalTicket, setCancelModalTicket] = useState(null); // ticket being cancelled
   const [cancelReason, setCancelReason] = useState('');
 
-  // Show user's tickets if any match, or all tickets for portal demo
+  // Show ONLY this user's tickets
   const userTickets = user
-    ? allTickets.filter(
-        (t) =>
-          (t.creatorEmail && user.email && t.creatorEmail.toLowerCase() === user.email.toLowerCase()) ||
-          (t.creator && user.fullName && t.creator.toLowerCase().includes(user.fullName.toLowerCase()))
-      )
+    ? allTickets.filter((t) => {
+        const userEmail = (user.email || '').toLowerCase().trim();
+        const userName = (user.fullName || '').toLowerCase().trim();
+        const userUsername = (user.username || '').toLowerCase().trim();
+
+        const tEmail = (t.creatorEmail || '').toLowerCase().trim();
+        const tCreator = (t.creator || '').toLowerCase().trim();
+        const tRequester = (t.requester || '').toLowerCase().trim();
+        const tUsername = (t.creatorUsername || '').toLowerCase().trim();
+
+        if (userEmail && tEmail && tEmail === userEmail) return true;
+        if (userUsername && tUsername && tUsername === userUsername) return true;
+        if (userName && tCreator && tCreator.includes(userName)) return true;
+        if (userName && tRequester && tRequester.includes(userName)) return true;
+        return false;
+      })
     : [];
 
-  const displayTickets = userTickets.length > 0 ? userTickets : allTickets;
+  const displayTickets = userTickets;
 
   const activeTicketsCount = displayTickets.filter(
     (t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED'
