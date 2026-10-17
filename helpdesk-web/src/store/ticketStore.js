@@ -561,6 +561,44 @@ export const useTicketStore = create(
         }));
       },
 
+      // Cancel ticket by creator before agent acceptance (FR03 / UC03 in Baocao_DA)
+      cancelTicket: (ticketId, reason) => {
+        const { time, date, iso } = getCurrentTimestamp();
+
+        set((state) => ({
+          tickets: state.tickets.map((ticket) => {
+            if (ticket.id !== ticketId) return ticket;
+
+            // Only allow cancellation if not yet accepted/in-progress
+            if (ticket.status !== 'NEW' && ticket.status !== 'ASSIGNED') {
+              return ticket;
+            }
+
+            const updatedHistory = [
+              ...(ticket.history || []),
+              {
+                id: Date.now(),
+                time,
+                date,
+                content: `Người dùng đã hủy yêu cầu hỗ trợ. Lý do: ${reason || 'Không còn nhu cầu hỗ trợ'}`,
+                type: 'status',
+              },
+            ];
+
+            return {
+              ...ticket,
+              status: 'CANCELLED',
+              cancellationReason: reason || 'Người dùng đã hủy yêu cầu',
+              updatedAt: iso,
+              slaResolution: 'Đã hủy',
+              slaRemaining: 'Đã hủy',
+              isBreached: false,
+              history: updatedHistory,
+            };
+          }),
+        }));
+      },
+
       // Assign technician
       assignTicket: (ticketId, assigneeName) => {
         const { time, date, iso } = getCurrentTimestamp();

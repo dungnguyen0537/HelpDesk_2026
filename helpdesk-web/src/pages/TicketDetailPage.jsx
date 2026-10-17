@@ -217,6 +217,19 @@ export default function TicketDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Description & Comments */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Cancellation Notice if cancelled (Baocao_DA UC03 / UC06) */}
+          {ticket.status === 'CANCELLED' && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4.5 space-y-1.5 text-rose-800">
+              <div className="flex items-center space-x-2 font-bold text-xs uppercase tracking-wider">
+                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                <span>Phiếu Yêu Cầu Đã Bị Hủy Bởi Người Dùng (FR03 / UC03)</span>
+              </div>
+              <p className="text-xs text-rose-700">
+                Lý do hủy: <strong>{ticket.cancellationReason || 'Người dùng đã hủy trước khi kỹ thuật viên tiếp nhận.'}</strong>
+              </p>
+            </div>
+          )}
+
           {/* Resolution Summary Card if resolved */}
           {(ticket.resolutionReason || ticket.solutionText) && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4.5 space-y-2">

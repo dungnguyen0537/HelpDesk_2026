@@ -419,6 +419,27 @@ Hệ thống đã nạp sẵn dữ liệu mẫu phục vụ kiểm thử và đ�
 > **QUY TẮC BẮT BUỘC CỦA DỰ ÁN**: Mỗi khi mã nguồn hoặc tính năng được cải tiến, bổ sung hay chỉnh sửa, tệp `README.md` này **bắt buộc phải được cập nhật đồng thời** để phản ánh chính xác nhất hiện trạng kỹ thuật của hệ thống.
 
 ### Lịch Sử Phiên Bản (Release History):
+* **v2.9.0 (2026-10-18)**:
+  - **Triển Khai & Chuẩn Hóa Toàn Diện 100% Theo Báo Cáo Đồ Án Chuyên Ngành (`Baocao_DA.docx`)**:
+    + **Chuẩn Hóa 4 Nhóm Actor & Ma Trận Phân Quyền (Chương 2 Báo Cáo)**:
+      * Người dùng (FR01-FR05, FR09, FR15, FR16).
+      * Nhân viên phụ trách (FR01, FR02, FR05, FR06, FR10, FR15, FR16).
+      * Quản lý (FR01, FR02, FR07, FR08, FR10, FR15, FR16).
+      * Quản trị viên (FR01, FR02, FR11, FR12, FR13, FR14, FR15, FR16).
+    + **Bổ Sung Tính Năng Hủy Phiếu Khi Chưa Tiếp Nhận (FR03 / UC03 & UC 2.6.3)**:
+      * Cho phép người dùng chủ động bấm "Hủy phiếu" trực tiếp tại danh sách yêu cầu khi phiếu ở trạng thái `NEW` hoặc `ASSIGNED` kèm hộp thoại ghi nhận lý do hủy.
+      * Tự động ghi vết vào lịch sử kiểm toán của phiếu và ngưng tính giờ SLA.
+      * Hiển thị cảnh báo trực quan "Phiếu Yêu Cầu Đã Bị Hủy Bởi Người Dùng" trên trang chi tiết `TicketDetailPage.jsx` khi nhân viên mở phiếu đã bị hủy (UC 2.6.6 Step 2.1).
+    + **Nâng Cấp Báo Cáo Thống Kê & Hiệu Suất Dịch Vụ Theo Chuẩn Mực (FR8 / UC8 & UC 2.6.7)**:
+      * Bổ sung bộ lọc khoảng thời gian Từ ngày - Đến ngày kèm cơ chế kiểm tra tính hợp lệ (`startDate <= endDate`) báo lỗi theo đúng luồng rẽ nhánh 2.1.
+      * Tích hợp tính năng "Xuất Báo Cáo Excel" (`.csv`) xuất toàn bộ danh sách phiếu, mức ưu tiên, kỹ thuật viên phụ trách và hạn cam kết SLA.
+      * Tách biệt 2 giao diện tab: *Tổng quan Cam kết SLA & Sự cố* (kèm biểu đồ tròn phân bổ nhóm sự cố thường gặp) và *Bảng Thống Kê Hiệu Suất Nhân Viên Phụ Trách* (thời gian xử lý trung bình MTTR, tỷ lệ đúng hạn %, điểm đánh giá CSAT).
+    + **Nâng Cấp Thiết Lập Mức Độ Ưu Tiên & Thời Hạn SLA (FR14 / UC14 & UC 2.6.8)**:
+      * Cho phép Quản trị viên bấm nút "Thiết lập" để cấu hình lại Thời hạn phản hồi đầu tiên (phút), Thời hạn giải quyết dứt điểm (phút) và Mốc cảnh báo sắp quá hạn (ngưỡng leo thang).
+      * Ràng buộc kiểm tra nghiêm ngặt: Giá trị bắt buộc là số dương lớn hơn 0 và thời hạn phản hồi phải nhỏ hơn thời hạn giải quyết theo luồng rẽ nhánh 2.1.
+    + **Hoàn Thiện Quản Lý Cơ Sở Tri Thức (FR10 / UC10 & UC 2.5.6)**:
+      * Hỗ trợ đầy đủ bộ thao tác Thêm mới, Chỉnh sửa nội dung (Sửa bài viết) và Xóa bài viết cho Kỹ thuật viên & Quản trị viên.
+      * Hệ thống đánh giá tính hữu ích (Thumbs Up / Down) và liên kết tạo phiếu nhanh khi chưa xử lý được.
 * **v2.8.0 (2026-10-13)**:
   - **Hoàn Thiện Hệ Thống Quản Trị Nhân Sự & Xác Thực Vận Hành Doanh Nghiệp Thực Tế (Enterprise Operational Production-Ready)**:
     + **Kho Lưu Trữ Dữ Liệu Nhân Sự Tập Trung & Bền Vững (`userStore.js`)**:

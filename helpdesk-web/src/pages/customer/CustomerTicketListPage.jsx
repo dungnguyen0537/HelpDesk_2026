@@ -29,6 +29,7 @@ export default function CustomerTicketListPage() {
   const allTickets = useTicketStore((state) => state.tickets);
   const reopenTicket = useTicketStore((state) => state.reopenTicket);
   const rateTicket = useTicketStore((state) => state.rateTicket);
+  const cancelTicket = useTicketStore((state) => state.cancelTicket);
 
   const [activeTab, setActiveTab] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,6 +41,9 @@ export default function CustomerTicketListPage() {
 
   const [reopenModalTicket, setReopenModalTicket] = useState(null); // ticket being reopened
   const [reopenReason, setReopenReason] = useState('');
+
+  const [cancelModalTicket, setCancelModalTicket] = useState(null); // ticket being cancelled
+  const [cancelReason, setCancelReason] = useState('');
 
   // Show user's tickets if any match, or all tickets for portal demo
   const userTickets = user
@@ -227,6 +231,24 @@ export default function CustomerTicketListPage() {
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         <span>Chưa ổn, mở lại</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Customer Cancel Ticket if not yet accepted (NEW or ASSIGNED) as per Baocao_DA FR03 / UC03 */}
+                  {(ticket.status === 'NEW' || ticket.status === 'ASSIGNED') && (
+                    <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCancelModalTicket(ticket);
+                          setCancelReason('');
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition-colors flex items-center space-x-1"
+                        title="Hủy phiếu yêu cầu khi chưa tiếp nhận"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Hủy phiếu</span>
                       </button>
                     </div>
                   )}
@@ -438,6 +460,77 @@ export default function CustomerTicketListPage() {
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white shadow-xs"
                 >
                   Xác nhận mở lại phiếu
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Ticket Modal (FR03 / UC03 in Baocao_DA) */}
+      {cancelModalTicket && (
+        <div
+          onClick={() => setCancelModalTicket(null)}
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-5"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                  <X className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Hủy Yêu Cầu Hỗ Trợ</h3>
+                  <span className="text-[11px] text-slate-500">{cancelModalTicket.id}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCancelModalTicket(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
+                Bạn đang yêu cầu hủy phiếu <strong className="text-slate-800">"{cancelModalTicket.title}"</strong>. Phiếu chưa được kỹ thuật viên tiếp nhận xử lý nên bạn có thể hủy bất kỳ lúc nào.
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Lý do hủy yêu cầu (Tùy chọn):
+                </label>
+                <textarea
+                  rows={3}
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Ví dụ: Đã tự khắc phục được, không còn nhu cầu xử lý..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setCancelModalTicket(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Không, giữ lại
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    cancelTicket(cancelModalTicket.id, cancelReason.trim());
+                    setCancelModalTicket(null);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
+                >
+                  Xác nhận hủy phiếu
                 </button>
               </div>
             </div>

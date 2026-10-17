@@ -86,10 +86,61 @@ export default function AdminSlaPoliciesPage() {
     applicableCategory: '',
   });
 
+  const [editingPolicy, setEditingPolicy] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    firstResponseMinutes: 30,
+    resolutionMinutes: 240,
+    escalationThreshold: '',
+  });
+  const [editError, setEditError] = useState('');
+
   const togglePolicyStatus = (id) => {
     setSlaPolicies(
       slaPolicies.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p))
     );
+  };
+
+  const handleOpenEdit = (policy) => {
+    setEditingPolicy(policy);
+    setEditFormData({
+      name: policy.name,
+      firstResponseMinutes: policy.firstResponseMinutes,
+      resolutionMinutes: policy.resolutionMinutes,
+      escalationThreshold: policy.escalationThreshold,
+    });
+    setEditError('');
+  };
+
+  const handleUpdatePolicy = (e) => {
+    e.preventDefault();
+    const resp = parseInt(editFormData.firstResponseMinutes);
+    const resol = parseInt(editFormData.resolutionMinutes);
+
+    // Validation as per UC 2.6.8 Step 2.1: positive number and firstResponse < resolution
+    if (isNaN(resp) || resp <= 0 || isNaN(resol) || resol <= 0) {
+      setEditError('Thời hạn phản hồi và thời hạn xử lý phải là số dương lớn hơn 0.');
+      return;
+    }
+    if (resp >= resol) {
+      setEditError('Thời hạn phản hồi ban đầu phải nhỏ hơn thời hạn xử lý dứt điểm.');
+      return;
+    }
+
+    setSlaPolicies(
+      slaPolicies.map((p) =>
+        p.id === editingPolicy.id
+          ? {
+              ...p,
+              firstResponseMinutes: resp,
+              resolutionMinutes: resol,
+              escalationThreshold: editFormData.escalationThreshold || p.escalationThreshold,
+            }
+          : p
+      )
+    );
+    setEditingPolicy(null);
+    setEditError('');
   };
 
   const handleCreatePolicy = (e) => {
@@ -279,16 +330,25 @@ export default function AdminSlaPoliciesPage() {
                     )}
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => togglePolicyStatus(p.id)}
-                      className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                        p.isActive
-                          ? 'text-rose-600 hover:bg-rose-50'
-                          : 'text-emerald-600 hover:bg-emerald-50'
-                      }`}
-                    >
-                      {p.isActive ? 'Tắt' : 'Bật lại'}
-                    </button>
+                    <div className="flex items-center justify-end space-x-2">
+                      <button
+                        onClick={() => handleOpenEdit(p)}
+                        className="text-xs font-semibold px-2.5 py-1 rounded-lg text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer"
+                        title="Thiết lập lại thời hạn SLA (UC 2.6.8)"
+                      >
+                        Thiết lập
+                      </button>
+                      <button
+                        onClick={() => togglePolicyStatus(p.id)}
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                          p.isActive
+                            ? 'text-rose-600 hover:bg-rose-50'
+                            : 'text-emerald-600 hover:bg-emerald-50'
+                        }`}
+                      >
+                        {p.isActive ? 'Tắt' : 'Bật'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -395,6 +455,97 @@ export default function AdminSlaPoliciesPage() {
                 </Button>
                 <Button type="submit" variant="primary" size="sm">
                   Lưu Chính Sách
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit SLA Policy / Thiết lập mức độ ưu tiên (UC 2.6.8) */}
+      {editingPolicy && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900">Thiết Lập Mức Độ Ưu Tiên & Thời Hạn SLA</h3>
+                <span className="text-[11px] text-slate-500 font-semibold">{editingPolicy.name}</span>
+              </div>
+              <button
+                onClick={() => setEditingPolicy(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePolicy} className="p-5 space-y-4">
+              {editError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center space-x-2">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span>{editError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Mức Độ Ưu Tiên</label>
+                <input
+                  type="text"
+                  disabled
+                  value={`${editingPolicy.priority} - ${editingPolicy.name}`}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 font-bold text-slate-700 cursor-not-allowed"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Thời Hạn Phản Hồi (Phút) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={editFormData.firstResponseMinutes}
+                    onChange={(e) => setEditFormData({ ...editFormData, firstResponseMinutes: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Quy chuẩn P1: 15p, P2: 30p, P3: 60p, P4: 120p</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Thời Hạn Xử Lý (Phút) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={editFormData.resolutionMinutes}
+                    onChange={(e) => setEditFormData({ ...editFormData, resolutionMinutes: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Ví dụ: 120 (2h), 240 (4h), 480 (8h), 1440 (24h)</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Mốc Cảnh Báo Sắp Quá Hạn (Ngưỡng Leo Thang)</label>
+                <input
+                  type="text"
+                  placeholder="VD: Còn 15% thời gian cam kết"
+                  value={editFormData.escalationThreshold}
+                  onChange={(e) => setEditFormData({ ...editFormData, escalationThreshold: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                <Button type="button" variant="outline" size="sm" onClick={() => setEditingPolicy(null)}>
+                  Hủy
+                </Button>
+                <Button type="submit" variant="primary" size="sm">
+                  Lưu Thiết Lập
                 </Button>
               </div>
             </form>

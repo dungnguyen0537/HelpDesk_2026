@@ -20,6 +20,8 @@ import {
   Copy,
   Terminal,
   LifeBuoy,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -259,6 +261,51 @@ Xác thực 2 yếu tố yêu cầu ngoài mật khẩu, bạn cần nhập thê
     summary: '',
     content: '',
   });
+
+  const [editingArticle, setEditingArticle] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  const handleEditArticle = (art, e) => {
+    e.stopPropagation();
+    setEditingArticle({ ...art });
+  };
+
+  const handleUpdateArticle = (e) => {
+    e.preventDefault();
+    if (!editingArticle.title || !editingArticle.content) return;
+
+    const catObj = categories.find((c) => c.id === editingArticle.category);
+    setArticles(
+      articles.map((a) =>
+        a.id === editingArticle.id
+          ? {
+              ...editingArticle,
+              categoryName: catObj ? catObj.title : a.categoryName,
+              updated: 'Hôm nay',
+            }
+          : a
+      )
+    );
+
+    if (selectedArticle && selectedArticle.id === editingArticle.id) {
+      setSelectedArticle({
+        ...editingArticle,
+        categoryName: catObj ? catObj.title : selectedArticle.categoryName,
+        updated: 'Hôm nay',
+      });
+    }
+
+    setEditingArticle(null);
+  };
+
+  const handleDeleteArticle = (id, e) => {
+    e.stopPropagation();
+    setArticles(articles.filter((a) => a.id !== id));
+    if (selectedArticle && selectedArticle.id === id) {
+      setSelectedArticle(null);
+    }
+    setDeleteConfirmId(null);
+  };
 
   const handleVote = (articleId, type) => {
     if (votedArticles[articleId]) return;
@@ -586,11 +633,31 @@ Xác thực 2 yếu tố yêu cầu ngoài mật khẩu, bạn cần nhập thê
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-4 self-end sm:self-center flex-shrink-0">
+                <div className="flex items-center space-x-3 self-end sm:self-center flex-shrink-0">
                   <div className="flex items-center space-x-1 text-xs text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg">
                     <ThumbsUp className="w-3.5 h-3.5" />
                     <span>{art.likes}</span>
                   </div>
+
+                  {(user?.role === 'ADMIN' || user?.role === 'AGENT' || user?.role === 'MANAGER') && (
+                    <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => handleEditArticle(art, e)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                        title="Sửa bài viết (UC 2.5.6)"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteArticle(art.id, e)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        title="Xóa bài viết (UC 2.5.6)"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
                   <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-900 group-hover:translate-x-0.5 transition-all" />
                 </div>
               </div>
@@ -808,6 +875,81 @@ Xác thực 2 yếu tố yêu cầu ngoài mật khẩu, bạn cần nhập thê
                 </Button>
                 <Button type="submit" variant="primary" size="sm">
                   Đăng Cẩm Nang
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT ARTICLE MODAL (UC 2.5.6 / FR10) */}
+      {editingArticle && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+              <h3 className="font-bold text-sm text-slate-900">Chỉnh Sửa Bài Viết Hướng Dẫn Kỹ Thuật (UC 2.5.6)</h3>
+              <button
+                onClick={() => setEditingArticle(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateArticle} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Tiêu Đề Hướng Dẫn *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingArticle.title}
+                  onChange={(e) => setEditingArticle({ ...editingArticle, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Phân Nhóm Tri Thức</label>
+                <select
+                  value={editingArticle.category}
+                  onChange={(e) => setEditingArticle({ ...editingArticle, category: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Tóm Tắt Ngắn Gọn</label>
+                <input
+                  type="text"
+                  value={editingArticle.summary}
+                  onChange={(e) => setEditingArticle({ ...editingArticle, summary: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Nội Dung Chi Tiết (Từng bước) *</label>
+                <textarea
+                  rows={6}
+                  required
+                  value={editingArticle.content}
+                  onChange={(e) => setEditingArticle({ ...editingArticle, content: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-mono"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                <Button type="button" variant="outline" size="sm" onClick={() => setEditingArticle(null)}>
+                  Hủy
+                </Button>
+                <Button type="submit" variant="primary" size="sm">
+                  Cập Nhật Bài Viết
                 </Button>
               </div>
             </form>
