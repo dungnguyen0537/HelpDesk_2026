@@ -172,7 +172,7 @@ export default function CustomerTicketListPage() {
             return (
               <div
                 key={ticket.id}
-                onClick={() => navigate(`/tickets/${ticket.id}`)}
+                onClick={() => navigate(`/portal/tickets/${ticket.id}`)}
                 className="bg-white rounded-2xl p-5 border border-slate-200 hover:border-primary-400 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-5 group"
               >
                 <div className="space-y-2.5 max-w-2xl">

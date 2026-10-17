@@ -31,9 +31,20 @@ export default function TicketDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { tickets, updateTicketStatus, assignTicket, addComment, resolveTicket } = useTicketStore();
+  const {
+    tickets,
+    updateTicketStatus,
+    assignTicket,
+    addComment,
+    resolveTicket,
+    cancelTicket,
+    reopenTicket,
+    rateTicket,
+  } = useTicketStore();
   const { user } = useAuthStore();
   const allUsers = useUserStore((state) => state.users);
+
+  const isStaff = user?.role === 'ADMIN' || user?.role === 'MANAGER' || user?.role === 'AGENT';
 
   // Dynamic list of active technicians and managers from userStore
   const dynamicTechnicians = allUsers
@@ -52,16 +63,27 @@ export default function TicketDetailPage() {
     solution: '',
   });
 
-  // Find ticket from store by ID or fallback to first
-  const ticket = tickets.find((t) => t.id === id) || tickets[0];
+  // Customer Modals State
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingScore, setRatingScore] = useState(5);
+  const [ratingFeedback, setRatingFeedback] = useState('');
+
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [reopenReason, setReopenReason] = useState('');
+
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+
+  // Find ticket from store by ID
+  const ticket = tickets.find((t) => t.id === id);
 
   if (!ticket) {
     return (
       <div className="max-w-2xl mx-auto py-16 text-center space-y-4">
         <h2 className="text-xl font-bold text-slate-800">Không tìm thấy phiếu hỗ trợ</h2>
-        <p className="text-xs text-slate-500">Mã phiếu yêu cầu không tồn tại hoặc đã bị xóa.</p>
-        <Button variant="primary" onClick={() => navigate('/tickets')}>
-          Về danh sách phiếu
+        <p className="text-xs text-slate-500">Mã phiếu yêu cầu không tồn tại hoặc bạn không có quyền xem.</p>
+        <Button variant="primary" onClick={() => navigate(isStaff ? '/tickets' : '/portal/my-tickets')}>
+          Quay lại danh sách phiếu
         </Button>
       </div>
     );
@@ -126,8 +148,10 @@ export default function TicketDetailPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => navigate('/tickets')}
+            type="button"
+            onClick={() => navigate(isStaff ? '/tickets' : '/portal/my-tickets')}
             className="p-2 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
+            title="Quay lại danh sách"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
@@ -151,64 +175,128 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
-        {/* Quick Resolution Controls according to ITSM specs */}
+        {/* Quick Resolution Controls according to ITSM specs & Role */}
         <div className="flex flex-wrap items-center gap-2">
-          {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' ? (
+          {isStaff ? (
             <>
-              {ticket.status !== 'WAITING_USER' ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleStatusChange('WAITING_USER')}
-                  className="text-purple-700 hover:bg-purple-50 border-purple-300"
-                  title="Tạm dừng tính giờ SLA trong lúc đợi người dùng cung cấp thông tin"
-                >
-                  <Clock className="w-4 h-4 mr-1 text-purple-600" />
-                  Chờ người dùng (Dừng SLA)
-                </Button>
-              ) : (
+              {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' && ticket.status !== 'CANCELLED' ? (
+                <>
+                  {ticket.status !== 'WAITING_USER' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleStatusChange('WAITING_USER')}
+                      className="text-purple-700 hover:bg-purple-50 border-purple-300"
+                      title="Tạm dừng tính giờ SLA trong lúc đợi người dùng cung cấp thông tin"
+                    >
+                      <Clock className="w-4 h-4 mr-1 text-purple-600" />
+                      Chờ người dùng (Dừng SLA)
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleStatusChange('IN_PROGRESS')}
+                      className="text-blue-700 hover:bg-blue-50 border-blue-300"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1 text-blue-600" />
+                      Tiếp tục xử lý (Chạy SLA)
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleStatusChange('RESOLVED')}
+                    className="text-emerald-700 hover:bg-emerald-50 border-emerald-300"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1 text-emerald-600" />
+                    Đánh dấu đã giải quyết
+                  </Button>
+                </>
+              ) : ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleStatusChange('IN_PROGRESS')}
-                  className="text-blue-700 hover:bg-blue-50 border-blue-300"
+                  className="text-amber-700 hover:bg-amber-50 border-amber-300"
                 >
-                  <RotateCcw className="w-4 h-4 mr-1 text-blue-600" />
-                  Tiếp tục xử lý (Chạy SLA)
+                  <RotateCcw className="w-4 h-4 mr-1 text-amber-600" />
+                  Mở lại phiếu (Đang xử lý)
+                </Button>
+              ) : null}
+
+              {ticket.status === 'NEW' && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => handleStatusChange('IN_PROGRESS')}
+                >
+                  <ShieldAlert className="w-4 h-4 mr-1" />
+                  Tiếp nhận xử lý
+                </Button>
+              )}
+            </>
+          ) : (
+            /* Customer Actions */
+            <>
+              {ticket.status === 'WAITING_USER' && (
+                <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 flex items-center space-x-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Kỹ thuật viên đang đợi phản hồi từ bạn</span>
+                </span>
+              )}
+
+              {ticket.status === 'RESOLVED' && (
+                <>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setRatingScore(5);
+                      setRatingFeedback('');
+                      setShowRatingModal(true);
+                    }}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-1.5" />
+                    Xác nhận khắc phục & Đóng phiếu
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setReopenReason('');
+                      setShowReopenModal(true);
+                    }}
+                    className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-1.5" />
+                    Chưa ổn, mở lại phiếu
+                  </Button>
+                </>
+              )}
+
+              {(ticket.status === 'NEW' || ticket.status === 'ASSIGNED') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCancelReason('');
+                    setShowCancelModal(true);
+                  }}
+                  className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                >
+                  <X className="w-4 h-4 mr-1.5" />
+                  Hủy yêu cầu hỗ trợ
                 </Button>
               )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleStatusChange('RESOLVED')}
-                className="text-emerald-700 hover:bg-emerald-50 border-emerald-300"
-              >
-                <CheckCircle className="w-4 h-4 mr-1 text-emerald-600" />
-                Đánh dấu đã giải quyết
-              </Button>
+              {ticket.status === 'CLOSED' && (
+                <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                  Phiếu đã đóng hoàn tất
+                </span>
+              )}
             </>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleStatusChange('IN_PROGRESS')}
-              className="text-amber-700 hover:bg-amber-50 border-amber-300"
-            >
-              <RotateCcw className="w-4 h-4 mr-1 text-amber-600" />
-              Mở lại phiếu (Đang xử lý)
-            </Button>
-          )}
-
-          {ticket.status === 'NEW' && (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => handleStatusChange('IN_PROGRESS')}
-            >
-              <ShieldAlert className="w-4 h-4 mr-1" />
-              Tiếp nhận xử lý
-            </Button>
           )}
         </div>
       </div>
@@ -217,6 +305,19 @@ export default function TicketDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Description & Comments */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Waiting User Action Banner (ITSM Step 5) */}
+          {ticket.status === 'WAITING_USER' && (
+            <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4.5 space-y-2 text-amber-900 shadow-2xs">
+              <div className="flex items-center space-x-2 font-bold text-xs uppercase tracking-wider text-amber-800">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span>Kỹ Thuật Viên Đang Đợi Thông Tin Phản Hồi Từ Bạn</span>
+              </div>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Kỹ thuật viên đã tiếp nhận và yêu cầu bạn cung cấp thêm thông tin hoặc kiểm tra lại thiết bị. Vui lòng nhập nội dung trả lời vào khung phản hồi phía dưới. Khi bạn gửi phản hồi, hệ thống sẽ tự động kích hoạt lại trạng thái <strong>Đang xử lý</strong>.
+              </p>
+            </div>
+          )}
+
           {/* Cancellation Notice if cancelled (Baocao_DA UC03 / UC06) */}
           {ticket.status === 'CANCELLED' && (
             <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4.5 space-y-1.5 text-rose-800">
@@ -315,31 +416,38 @@ export default function TicketDetailPage() {
           {/* Comment Stream */}
           <Card bodyClassName="p-0">
             {/* Tabs for comment mode */}
-            <div className="border-b border-slate-200 px-5 pt-3 flex space-x-4">
-              <button
-                type="button"
-                onClick={() => setActiveCommentTab('PUBLIC')}
-                className={`pb-3 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
-                  activeCommentTab === 'PUBLIC'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                Trao đổi công khai (Khách hàng thấy)
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveCommentTab('INTERNAL')}
-                className={`pb-3 text-xs font-semibold border-b-2 flex items-center space-x-1.5 transition-colors cursor-pointer ${
-                  activeCommentTab === 'INTERNAL'
-                    ? 'border-amber-600 text-amber-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Lock className="w-3.5 h-3.5 text-amber-500" />
-                <span>Ghi chú nội bộ (Chỉ Kỹ thuật)</span>
-              </button>
-            </div>
+            {isStaff ? (
+              <div className="border-b border-slate-200 px-5 pt-3 flex space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveCommentTab('PUBLIC')}
+                  className={`pb-3 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
+                    activeCommentTab === 'PUBLIC'
+                      ? 'border-primary-600 text-primary-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Trao đổi công khai (Khách hàng thấy)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveCommentTab('INTERNAL')}
+                  className={`pb-3 text-xs font-semibold border-b-2 flex items-center space-x-1.5 transition-colors cursor-pointer ${
+                    activeCommentTab === 'INTERNAL'
+                      ? 'border-amber-600 text-amber-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Lock className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Ghi chú nội bộ (Chỉ Kỹ thuật)</span>
+                </button>
+              </div>
+            ) : (
+              <div className="border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900">Nội Dung Trao Đổi & Phản Hồi</span>
+                <span className="text-[11px] text-slate-500">Trao đổi trực tiếp với kỹ thuật viên</span>
+              </div>
+            )}
 
             {/* Conversation Feed */}
             <div className="p-5 space-y-4 max-h-[450px] overflow-y-auto">
@@ -376,7 +484,7 @@ export default function TicketDetailPage() {
                 ))
               ) : (
                 <div className="text-center py-6 text-slate-400 text-xs italic">
-                  Chưa có trao đổi nào trong mục này. Hãy gửi tin nhắn đầu tiên.
+                  Chưa có trao đổi nào. Hãy nhập nội dung bên dưới để gửi phản hồi đầu tiên.
                 </div>
               )}
             </div>
@@ -386,9 +494,11 @@ export default function TicketDetailPage() {
               <textarea
                 rows={3}
                 placeholder={
-                  activeCommentTab === 'INTERNAL'
-                    ? 'Nhập ghi chú kỹ thuật bảo mật (chỉ nhân viên IT đọc được)...'
-                    : 'Gửi phản hồi cho khách hàng...'
+                  isStaff
+                    ? activeCommentTab === 'INTERNAL'
+                      ? 'Nhập ghi chú kỹ thuật bảo mật (chỉ nhân viên IT đọc được)...'
+                      : 'Gửi phản hồi cho khách hàng...'
+                    : 'Nhập nội dung phản hồi hoặc trả lời cho kỹ thuật viên...'
                 }
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
@@ -396,14 +506,16 @@ export default function TicketDetailPage() {
               />
               <div className="flex items-center justify-between mt-2.5">
                 <span className="text-[11px] text-slate-400">
-                  {activeCommentTab === 'INTERNAL'
-                    ? 'Ghi chú nội bộ (Khách hàng không nhìn thấy nội dung này)'
-                    : 'Tin nhắn công khai gửi đến khách hàng'}
+                  {isStaff
+                    ? activeCommentTab === 'INTERNAL'
+                      ? 'Ghi chú nội bộ (Khách hàng không nhìn thấy nội dung này)'
+                      : 'Tin nhắn công khai gửi đến khách hàng'
+                    : 'Tin nhắn này sẽ được gửi trực tiếp đến kỹ thuật viên phụ trách'}
                 </span>
                 <Button
                   type="submit"
                   size="sm"
-                  variant={activeCommentTab === 'INTERNAL' ? 'secondary' : 'primary'}
+                  variant={isStaff && activeCommentTab === 'INTERNAL' ? 'secondary' : 'primary'}
                 >
                   <Send className="w-3.5 h-3.5 mr-1" />
                   Gửi phản hồi
@@ -416,42 +528,58 @@ export default function TicketDetailPage() {
         {/* Right Column: Ticket Meta & SLA Policy */}
         <div className="space-y-6">
           {/* Metadata Card */}
-          <Card title="Thông Tin Quản Trị">
+          <Card title={isStaff ? 'Thông Tin Quản Trị' : 'Thông Tin Phiếu Yêu Cầu'}>
             <div className="space-y-3.5 text-xs">
               <div>
                 <label className="text-slate-500 block mb-1">Trạng thái phiếu:</label>
-                <select
-                  value={ticket.status}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="NEW">Mới tạo (NEW)</option>
-                  <option value="ASSIGNED">Đã gán (ASSIGNED)</option>
-                  <option value="IN_PROGRESS">Đang xử lý (IN_PROGRESS)</option>
-                  <option value="PENDING">Chờ khách (PENDING)</option>
-                  <option value="RESOLVED">Đã giải quyết (RESOLVED)</option>
-                  <option value="CLOSED">Đóng phiếu (CLOSED)</option>
-                </select>
+                {isStaff ? (
+                  <select
+                    value={ticket.status}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="NEW">Mới tạo (NEW)</option>
+                    <option value="ASSIGNED">Đã gán (ASSIGNED)</option>
+                    <option value="IN_PROGRESS">Đang xử lý (IN_PROGRESS)</option>
+                    <option value="WAITING_USER">Chờ khách (WAITING_USER)</option>
+                    <option value="RESOLVED">Đã giải quyết (RESOLVED)</option>
+                    <option value="CLOSED">Đóng phiếu (CLOSED)</option>
+                  </select>
+                ) : (
+                  <div className="mt-1">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${statusInfo.color}`}
+                    >
+                      {statusInfo.label}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="text-slate-500 block mb-1">Kỹ thuật viên phụ trách:</label>
-                <select
-                  value={ticket.assignee || ''}
-                  onChange={(e) => handleAssigneeChange(e.target.value)}
-                  className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="">-- Chưa phân công --</option>
-                  {dynamicTechnicians.map((tech) => (
-                    <option key={tech.value} value={tech.value}>
-                      {tech.label}
-                    </option>
-                  ))}
-                  {ticket.assignee &&
-                    !dynamicTechnicians.some((t) => t.value === ticket.assignee) && (
-                      <option value={ticket.assignee}>{ticket.assignee}</option>
-                    )}
-                </select>
+                {isStaff ? (
+                  <select
+                    value={ticket.assignee || ''}
+                    onChange={(e) => handleAssigneeChange(e.target.value)}
+                    className="w-full px-2.5 py-2 border border-slate-300 rounded-lg bg-white font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="">-- Chưa phân công --</option>
+                    {dynamicTechnicians.map((tech) => (
+                      <option key={tech.value} value={tech.value}>
+                        {tech.label}
+                      </option>
+                    ))}
+                    {ticket.assignee &&
+                      !dynamicTechnicians.some((t) => t.value === ticket.assignee) && (
+                        <option value={ticket.assignee}>{ticket.assignee}</option>
+                      )}
+                  </select>
+                ) : (
+                  <div className="font-semibold text-slate-800 text-xs mt-1">
+                    {ticket.assignedTo || ticket.assignee || 'Đang chờ điều phối'}
+                  </div>
+                )}
               </div>
 
               <div className="pt-2 border-t border-slate-100">
@@ -684,6 +812,254 @@ export default function TicketDetailPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Đánh giá CSAT & Đóng phiếu (FR04 / UC04) */}
+      {showRatingModal && (
+        <div
+          onClick={() => setShowRatingModal(false)}
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-5"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Đánh Giá & Đóng Phiếu Hỗ Trợ</h3>
+                  <span className="text-[11px] text-slate-500">Mã phiếu: {ticket.id}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRatingModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-2 text-center">
+                  Mức độ hài lòng của bạn về dịch vụ:
+                </label>
+                <div className="flex items-center justify-center space-x-2">
+                  {[1, 2, 3, 4, 5].map((score) => (
+                    <button
+                      key={score}
+                      type="button"
+                      onClick={() => setRatingScore(score)}
+                      className={`w-10 h-10 rounded-xl text-sm font-bold border transition-all ${
+                        ratingScore === score
+                          ? 'bg-amber-500 text-white border-amber-600 shadow-sm scale-110'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {score}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-center text-[11px] text-slate-500 mt-1.5">
+                  {ratingScore === 5
+                    ? 'Rất hài lòng'
+                    : ratingScore === 4
+                    ? 'Hài lòng'
+                    : ratingScore === 3
+                    ? 'Bình thường'
+                    : ratingScore === 2
+                    ? 'Chưa hài lòng'
+                    : 'Rất không hài lòng'}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Ý kiến đóng góp thêm (Tùy chọn):
+                </label>
+                <textarea
+                  rows={3}
+                  value={ratingFeedback}
+                  onChange={(e) => setRatingFeedback(e.target.value)}
+                  placeholder="Nhận xét về thái độ phục vụ hoặc tốc độ xử lý..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowRatingModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Để sau
+                </button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    rateTicket(ticket.id, ratingScore, ratingFeedback);
+                    setShowRatingModal(false);
+                  }}
+                >
+                  <CheckCircle className="w-4 h-4 mr-1.5" />
+                  Xác nhận & Đóng phiếu
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Mở lại phiếu (FR04 / UC04) */}
+      {showReopenModal && (
+        <div
+          onClick={() => setShowReopenModal(false)}
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-5"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Yêu Cầu Mở Lại Phiếu Hỗ Trợ</h3>
+                  <span className="text-[11px] text-slate-500">Mã phiếu: {ticket.id}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReopenModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Nếu sự cố vẫn chưa được xử lý dứt điểm hoặc phát sinh lại, bạn có thể yêu cầu kỹ thuật viên tiếp tục hỗ trợ.
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Lý do chưa khắc phục <span className="text-rose-500">*</span>:
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={reopenReason}
+                  onChange={(e) => setReopenReason(e.target.value)}
+                  placeholder="Mô tả cụ thể hiện trạng lỗi hiện tại..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowReopenModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Hủy
+                </button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    if (!reopenReason.trim()) return;
+                    reopenTicket(ticket.id, reopenReason.trim());
+                    setShowReopenModal(false);
+                  }}
+                >
+                  <RotateCcw className="w-4 h-4 mr-1.5" />
+                  Mở lại phiếu ngay
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Hủy phiếu yêu cầu (FR03 / UC03) */}
+      {showCancelModal && (
+        <div
+          onClick={() => setShowCancelModal(false)}
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-slate-200 space-y-5"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
+                  <X className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Xác Nhận Hủy Phiếu Yêu Cầu</h3>
+                  <span className="text-[11px] text-slate-500">Mã phiếu: {ticket.id}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCancelModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Bạn chỉ có thể hủy phiếu khi kỹ thuật viên chưa bắt đầu xử lý. Phiếu đã hủy sẽ không được kỹ thuật viên tiếp nhận nữa.
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">Lý do hủy:</label>
+                <textarea
+                  rows={3}
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Ví dụ: Đã tự khắc phục được, không cần hỗ trợ nữa..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Không hủy
+                </button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    cancelTicket(ticket.id, cancelReason);
+                    setShowCancelModal(false);
+                  }}
+                >
+                  <X className="w-4 h-4 mr-1.5" />
+                  Xác nhận hủy phiếu
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

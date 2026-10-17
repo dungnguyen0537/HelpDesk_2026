@@ -259,7 +259,7 @@ export default function CustomerPortalPage() {
               myTickets.map((t) => (
                 <div
                   key={t.id}
-                  onClick={() => navigate(`/tickets/${t.id}`)}
+                  onClick={() => navigate(`/portal/tickets/${t.id}`)}
                   className="bg-white rounded-2xl p-5 border border-slate-200 hover:border-primary-300 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
                   <div className="space-y-2 max-w-2xl">

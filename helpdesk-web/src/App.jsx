@@ -66,6 +66,7 @@ export default function App() {
         >
           <Route index element={<CustomerPortalPage />} />
           <Route path="my-tickets" element={<CustomerTicketListPage />} />
+          <Route path="tickets/:id" element={<TicketDetailPage />} />
           <Route path="create-ticket" element={<CustomerCreateTicketPage />} />
           <Route path="faq" element={<CustomerFAQPage />} />
         </Route>
