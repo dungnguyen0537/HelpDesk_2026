@@ -44,7 +44,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new UnauthorizedException("Tên đăng nhập hoặc mật khẩu không chính xác"));
 
         if (Boolean.FALSE.equals(user.getIsActive())) {
-            throw new BadRequestException("Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
+            throw new BadRequestException("Tài khoản của bạn đang ở trạng thái CHỜ DUYỆT hoặc tạm khóa. Vui lòng đợi Quản trị viên (Admin) hoặc Trưởng phòng (Manager) phê duyệt.");
         }
 
         Authentication authentication = authenticationManager.authenticate(
@@ -71,6 +71,7 @@ public class AuthServiceImpl implements AuthService {
             throw new ConflictException("Email '" + request.getEmail() + "' đã được sử dụng");
         }
 
+        // Tài khoản tự đăng ký mặc định là CUSTOMER và isActive = false (chờ Admin/Manager duyệt)
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
@@ -78,7 +79,7 @@ public class AuthServiceImpl implements AuthService {
                 .fullName(request.getFullName())
                 .phoneNumber(request.getPhoneNumber())
                 .role(UserRole.CUSTOMER)
-                .isActive(true)
+                .isActive(false)
                 .build();
 
         User savedUser = userRepository.save(user);

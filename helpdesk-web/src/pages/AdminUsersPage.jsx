@@ -40,7 +40,8 @@ const ROLES_LIST = [
 ];
 
 export default function AdminUsersPage() {
-  const { users, addUser, updateUser, toggleUserStatus, resetPassword } = useUserStore();
+  const { users, addUser, updateUser, toggleUserStatus, resetPassword, approveUser, rejectUser } =
+    useUserStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
@@ -78,10 +79,11 @@ export default function AdminUsersPage() {
 
   // KPI Counts
   const totalCount = users.length;
-  const activeCount = users.filter((u) => u.isActive).length;
+  const activeCount = users.filter((u) => u.isActive && u.approvalStatus !== 'PENDING').length;
+  const pendingCount = users.filter((u) => u.approvalStatus === 'PENDING').length;
   const agentCount = users.filter((u) => u.role === 'AGENT').length;
   const managerAdminCount = users.filter((u) => u.role === 'ADMIN' || u.role === 'MANAGER').length;
-  const lockedCount = users.filter((u) => !u.isActive).length;
+  const lockedCount = users.filter((u) => !u.isActive && u.approvalStatus !== 'PENDING').length;
 
   // Filtered Users
   const filteredUsers = users.filter((u) => {
@@ -96,8 +98,9 @@ export default function AdminUsersPage() {
     const matchesDept = deptFilter === 'ALL' || u.department === deptFilter;
     const matchesStatus =
       statusFilter === 'ALL' ||
-      (statusFilter === 'ACTIVE' && u.isActive) ||
-      (statusFilter === 'LOCKED' && !u.isActive);
+      (statusFilter === 'PENDING' && u.approvalStatus === 'PENDING') ||
+      (statusFilter === 'ACTIVE' && u.isActive && u.approvalStatus !== 'PENDING') ||
+      (statusFilter === 'LOCKED' && !u.isActive && u.approvalStatus !== 'PENDING');
 
     return matchesSearch && matchesRole && matchesDept && matchesStatus;
   });
@@ -185,12 +188,18 @@ export default function AdminUsersPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3.5">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
           <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
             Tổng nhân sự
           </span>
           <span className="text-xl font-bold text-slate-900 mt-1 block">{totalCount}</span>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-amber-200 bg-amber-50/30 shadow-2xs">
+          <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider block">
+            Chờ xét duyệt
+          </span>
+          <span className="text-xl font-bold text-amber-700 mt-1 block">{pendingCount}</span>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
           <span className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider block">
@@ -200,7 +209,7 @@ export default function AdminUsersPage() {
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
           <span className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider block">
-            Kỹ thuật viên (Agent)
+            Kỹ thuật viên
           </span>
           <span className="text-xl font-bold text-blue-700 mt-1 block">{agentCount}</span>
         </div>
@@ -265,11 +274,12 @@ export default function AdminUsersPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              className="px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary-500 font-medium"
             >
               <option value="ALL">Tất cả trạng thái</option>
-              <option value="ACTIVE">Đang hoạt động</option>
-              <option value="LOCKED">Đã khóa</option>
+              <option value="PENDING">Chờ phê duyệt ({pendingCount})</option>
+              <option value="ACTIVE">Đang hoạt động ({activeCount})</option>
+              <option value="LOCKED">Đã khóa ({lockedCount})</option>
             </select>
 
             {(searchTerm || roleFilter !== 'ALL' || deptFilter !== 'ALL' || statusFilter !== 'ALL') && (
@@ -343,66 +353,108 @@ export default function AdminUsersPage() {
                       {u.phone && <span className="text-[11px] text-slate-400">{u.phone}</span>}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                          u.isActive
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}
-                      >
-                        {u.isActive ? 'Đang hoạt động' : 'Tạm khóa'}
-                      </span>
+                      {u.approvalStatus === 'PENDING' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-amber-50 text-amber-700 border-amber-300">
+                          Chờ xét duyệt
+                        </span>
+                      ) : u.approvalStatus === 'REJECTED' ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-slate-100 text-slate-600 border-slate-300">
+                          Bị từ chối
+                        </span>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            u.isActive
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}
+                        >
+                          {u.isActive ? 'Đang hoạt động' : 'Tạm khóa'}
+                        </span>
+                      )}
                     </td>
-                    <td className="py-3.5 px-4 text-right space-x-1.5">
-                      {/* Edit Button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingUser(u);
-                          setEditForm({
-                            fullName: u.fullName,
-                            employeeId: u.employeeId || '',
-                            phone: u.phone || '',
-                            role: u.role,
-                            department: u.department,
-                            isActive: u.isActive,
-                          });
-                        }}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-primary-600 hover:bg-slate-100 transition-colors"
-                        title="Chỉnh sửa thông tin"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                    <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                      {/* Special Actions for Pending Users */}
+                      {u.approvalStatus === 'PENDING' ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const res = approveUser(u.id);
+                              showNotification(`Đã duyệt tài khoản cho "${u.fullName}"`);
+                            }}
+                            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-2xs"
+                            title="Phê duyệt và kích hoạt tài khoản"
+                          >
+                            <UserCheck className="w-3.5 h-3.5" />
+                            <span>Duyệt</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const res = rejectUser(u.id);
+                              showNotification(`Đã từ chối tài khoản "${u.fullName}"`, 'error');
+                            }}
+                            className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg text-[11px] font-medium text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors"
+                            title="Từ chối phê duyệt"
+                          >
+                            <UserX className="w-3.5 h-3.5" />
+                            <span>Từ chối</span>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {/* Edit Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingUser(u);
+                              setEditForm({
+                                fullName: u.fullName,
+                                employeeId: u.employeeId || '',
+                                phone: u.phone || '',
+                                role: u.role,
+                                department: u.department,
+                                isActive: u.isActive,
+                              });
+                            }}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-primary-600 hover:bg-slate-100 transition-colors"
+                            title="Chỉnh sửa thông tin"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
 
-                      {/* Reset Password Button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setResettingUser(u);
-                          setNewPasswordInput('password123');
-                        }}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                        title="Đặt lại mật khẩu"
-                      >
-                        <KeyRound className="w-3.5 h-3.5" />
-                      </button>
+                          {/* Reset Password Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setResettingUser(u);
+                              setNewPasswordInput('password123');
+                            }}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                            title="Đặt lại mật khẩu"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                          </button>
 
-                      {/* Lock / Unlock Toggle */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const res = toggleUserStatus(u.id);
-                          showNotification(res.message);
-                        }}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          u.isActive
-                            ? 'text-rose-500 hover:bg-rose-50'
-                            : 'text-emerald-600 hover:bg-emerald-50'
-                        }`}
-                        title={u.isActive ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
-                      >
-                        {u.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                      </button>
+                          {/* Lock / Unlock Toggle */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const res = toggleUserStatus(u.id);
+                              showNotification(res.message);
+                            }}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              u.isActive
+                                ? 'text-rose-500 hover:bg-rose-50'
+                                : 'text-emerald-600 hover:bg-emerald-50'
+                            }`}
+                            title={u.isActive ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+                          >
+                            {u.isActive ? <Ban className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -445,6 +497,10 @@ export default function AdminUsersPage() {
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+
+            <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] leading-relaxed">
+              <strong>Cấp quyền nội bộ:</strong> Tài khoản do Quản trị viên (Admin) hoặc Trưởng bộ phận (Manager) tạo sẽ được <strong>kích hoạt ngay</strong> mà không cần qua bước chờ xét duyệt.
             </div>
 
             <form onSubmit={handleAddSubmit} className="space-y-3.5">

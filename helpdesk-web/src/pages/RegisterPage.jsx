@@ -81,7 +81,7 @@ export default function RegisterPage() {
         // Tiếp tục lưu vào kho dữ liệu userStore
       }
 
-      // 2. Lưu trực tiếp vào userStore nội bộ
+      // 2. Lưu trực tiếp vào userStore nội bộ với trạng thái tự đăng ký (isSelfRegister: true)
       const result = addUser({
         fullName: formData.fullName,
         employeeId: formData.employeeId || `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -92,7 +92,7 @@ export default function RegisterPage() {
         departmentId: Number(formData.departmentId),
         password: formData.password,
         role: 'CUSTOMER',
-        isActive: true,
+        isSelfRegister: true, // Đánh dấu tự đăng ký -> vào hàng chờ duyệt
       });
 
       if (!result.success) {
@@ -101,10 +101,12 @@ export default function RegisterPage() {
         return;
       }
 
-      setSuccessMsg('Đăng ký tài khoản thành công! Bạn có thể dùng tài khoản này để đăng nhập ngay bây giờ.');
+      setSuccessMsg(
+        'Đăng ký tài khoản thành công! Theo quy định bảo mật nội bộ, tài khoản của bạn đã được chuyển vào hàng chờ xét duyệt của Quản trị viên (Admin) hoặc Trưởng bộ phận (Manager). Vui lòng đợi quản lý phê duyệt để đăng nhập.'
+      );
       setTimeout(() => {
         navigate('/login');
-      }, 1800);
+      }, 4000);
     } catch (err) {
       setErrorMsg(err?.message || 'Đăng ký không thành công. Hãy thử lại.');
     } finally {
@@ -121,7 +123,7 @@ export default function RegisterPage() {
             <Headphones className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">HelpDesk Enterprise</h1>
-          <p className="text-xs text-slate-500">Cổng đăng ký tài khoản khách hàng</p>
+          <p className="text-xs text-slate-500">Cổng đăng ký tài khoản cán bộ, nhân viên nội bộ</p>
         </div>
 
         {/* Card Form */}
@@ -129,6 +131,9 @@ export default function RegisterPage() {
           <div className="mb-6">
             <h2 className="text-lg font-bold text-slate-900">Tạo tài khoản mới</h2>
             <p className="text-xs text-slate-500 mt-0.5">Điền thông tin để bắt đầu gửi yêu cầu hỗ trợ</p>
+            <div className="mt-2.5 p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-xs leading-relaxed">
+              <strong>Lưu ý bảo mật:</strong> Tài khoản tự đăng ký cần được <strong>Admin</strong> hoặc <strong>Trưởng phòng (Manager)</strong> phê duyệt trước khi có thể đăng nhập.
+            </div>
           </div>
 
           {errorMsg && (
@@ -139,8 +144,12 @@ export default function RegisterPage() {
           )}
 
           {successMsg && (
-            <div className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium">
-              {successMsg}
+            <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs leading-relaxed">
+              <div className="font-bold flex items-center space-x-1.5 mb-1">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Yêu cầu đăng ký đã được ghi nhận</span>
+              </div>
+              <p>{successMsg}</p>
             </div>
           )}
 

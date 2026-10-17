@@ -16,6 +16,7 @@ export const INITIAL_USERS = [
     phone: '0901.234.567',
     avatar: '',
     isActive: true,
+    approvalStatus: 'APPROVED',
     createdAt: '2026-01-15T08:00:00Z',
     lastLoginAt: '2026-10-13T08:30:00Z',
   },
@@ -32,6 +33,7 @@ export const INITIAL_USERS = [
     phone: '0902.345.678',
     avatar: '',
     isActive: true,
+    approvalStatus: 'APPROVED',
     createdAt: '2026-02-01T08:00:00Z',
     lastLoginAt: '2026-10-12T14:15:00Z',
   },
@@ -48,6 +50,7 @@ export const INITIAL_USERS = [
     phone: '0903.456.789',
     avatar: '',
     isActive: true,
+    approvalStatus: 'APPROVED',
     createdAt: '2026-02-10T08:00:00Z',
     lastLoginAt: '2026-10-13T07:45:00Z',
   },
@@ -64,6 +67,7 @@ export const INITIAL_USERS = [
     phone: '0904.567.890',
     avatar: '',
     isActive: true,
+    approvalStatus: 'APPROVED',
     createdAt: '2026-02-15T08:00:00Z',
     lastLoginAt: '2026-10-13T09:10:00Z',
   },
@@ -80,6 +84,7 @@ export const INITIAL_USERS = [
     phone: '0905.678.901',
     avatar: '',
     isActive: true,
+    approvalStatus: 'APPROVED',
     createdAt: '2026-03-01T08:00:00Z',
     lastLoginAt: '2026-10-11T16:20:00Z',
   },
@@ -96,6 +101,7 @@ export const INITIAL_USERS = [
     phone: '0912.345.678',
     avatar: '',
     isActive: true,
+    approvalStatus: 'APPROVED',
     createdAt: '2026-03-15T08:00:00Z',
     lastLoginAt: '2026-10-13T10:00:00Z',
   },
@@ -112,6 +118,7 @@ export const INITIAL_USERS = [
     phone: '0908.123.456',
     avatar: '',
     isActive: true,
+    approvalStatus: 'APPROVED',
     createdAt: '2026-04-01T08:00:00Z',
     lastLoginAt: '2026-10-10T11:30:00Z',
   },
@@ -128,8 +135,26 @@ export const INITIAL_USERS = [
     phone: '0977.112.233',
     avatar: '',
     isActive: false, // Tài khoản đã khóa
+    approvalStatus: 'APPROVED',
     createdAt: '2026-04-10T08:00:00Z',
     lastLoginAt: '2026-08-20T09:00:00Z',
+  },
+  {
+    id: 9,
+    employeeId: 'EMP-0250',
+    fullName: 'Đặng Tuấn Anh',
+    username: 'anh.dt',
+    email: 'anh.dt@doanhnghiep.vn',
+    password: 'password123',
+    role: 'CUSTOMER',
+    department: 'Phát Triển Phần Mềm & ERP',
+    departmentId: 2,
+    phone: '0988.223.344',
+    avatar: '',
+    isActive: false, // Chưa kích hoạt
+    approvalStatus: 'PENDING', // Đang chờ Admin/Manager duyệt
+    createdAt: '2026-10-17T15:20:00Z',
+    lastLoginAt: null,
   },
 ];
 
@@ -164,6 +189,23 @@ export const useUserStore = create(
           };
         }
 
+        // Kiểm tra trạng thái duyệt tài khoản
+        if (foundUser.approvalStatus === 'PENDING') {
+          return {
+            success: false,
+            message:
+              'Tài khoản của bạn đang ở trạng thái CHỜ DUYỆT. Theo quy định bảo mật nội bộ, Quản trị viên (Admin) hoặc Trưởng bộ phận (Manager) cần phê duyệt trước khi bạn có thể đăng nhập.',
+          };
+        }
+
+        if (foundUser.approvalStatus === 'REJECTED') {
+          return {
+            success: false,
+            message:
+              'Yêu cầu đăng ký tài khoản của bạn đã bị từ chối phê duyệt. Vui lòng liên hệ ban quản trị để được hỗ trợ.',
+          };
+        }
+
         if (!foundUser.isActive) {
           return {
             success: false,
@@ -192,7 +234,7 @@ export const useUserStore = create(
         };
       },
 
-      // Tạo tài khoản nhân sự mới
+      // Tạo tài khoản nhân sự mới hoặc Đăng ký
       addUser: (userData) => {
         const { users } = get();
         const emailLower = (userData.email || '').trim().toLowerCase();
@@ -209,6 +251,12 @@ export const useUserStore = create(
         const newId = users.length > 0 ? Math.max(...users.map((u) => u.id)) + 1 : 1;
         const employeeId = userData.employeeId || `EMP-${String(newId).padStart(4, '0')}`;
 
+        // Quy tắc: Nếu tự đăng ký (isSelfRegister: true) -> Chờ duyệt (PENDING), chưa kích hoạt (isActive: false)
+        // Nếu do Admin/Manager tạo trực tiếp từ bảng quản trị -> Đã duyệt (APPROVED), kích hoạt ngay
+        const isSelf = !!userData.isSelfRegister;
+        const approvalStatus = isSelf ? 'PENDING' : 'APPROVED';
+        const isActive = isSelf ? false : (userData.isActive !== undefined ? userData.isActive : true);
+
         const newUser = {
           id: newId,
           employeeId,
@@ -221,7 +269,8 @@ export const useUserStore = create(
           departmentId: userData.departmentId || 1,
           phone: userData.phone || userData.phoneNumber || '',
           avatar: '',
-          isActive: userData.isActive !== undefined ? userData.isActive : true,
+          isActive,
+          approvalStatus,
           createdAt: new Date().toISOString(),
           lastLoginAt: null,
         };
@@ -233,7 +282,51 @@ export const useUserStore = create(
         const safeUser = { ...newUser };
         delete safeUser.password;
 
-        return { success: true, user: safeUser, message: 'Tạo tài khoản thành công.' };
+        return {
+          success: true,
+          user: safeUser,
+          message: isSelf
+            ? 'Đăng ký thành công! Tài khoản đang chờ Quản trị viên (Admin) hoặc Trưởng bộ phận duyệt.'
+            : 'Tạo tài khoản thành công.',
+        };
+      },
+
+      // Phê duyệt tài khoản tự đăng ký (Admin hoặc Manager thực hiện)
+      approveUser: (userId, approvedBy = 'Quản trị viên') => {
+        set((state) => ({
+          users: state.users.map((u) => {
+            if (u.id === userId) {
+              return {
+                ...u,
+                approvalStatus: 'APPROVED',
+                isActive: true,
+                approvedBy,
+                approvedAt: new Date().toISOString(),
+              };
+            }
+            return u;
+          }),
+        }));
+        return { success: true, message: 'Đã phê duyệt và kích hoạt tài khoản thành công.' };
+      },
+
+      // Từ chối phê duyệt tài khoản tự đăng ký
+      rejectUser: (userId, reason = 'Không đúng thông tin nhân sự') => {
+        set((state) => ({
+          users: state.users.map((u) => {
+            if (u.id === userId) {
+              return {
+                ...u,
+                approvalStatus: 'REJECTED',
+                isActive: false,
+                rejectionReason: reason,
+                rejectedAt: new Date().toISOString(),
+              };
+            }
+            return u;
+          }),
+        }));
+        return { success: true, message: 'Đã từ chối phê duyệt tài khoản.' };
       },
 
       // Cập nhật thông tin tài khoản
