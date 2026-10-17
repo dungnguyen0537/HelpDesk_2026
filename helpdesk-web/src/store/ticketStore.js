@@ -305,7 +305,7 @@ export const initialTickets = [
     updatedAt: '2026-09-21T11:00:00Z',
     slaResolution: 'Đạt SLA',
     slaRemaining: 'Đạt SLA',
-    slaNotice: 'Khách hàng đã đánh giá 5 sao ★★★★★',
+    slaNotice: 'Khách hàng đã đánh giá 5/5 sao',
     isBreached: false,
     description:
       'Hỗ trợ cài đặt phần mềm xem bản vẽ AutoCAD DWG TrueView và kết nối driver máy in đa chức năng.',

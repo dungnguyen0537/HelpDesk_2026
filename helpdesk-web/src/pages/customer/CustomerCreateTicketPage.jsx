@@ -134,6 +134,10 @@ export default function CustomerCreateTicketPage() {
 
   const processFiles = (files) => {
     const fileArray = Array.from(files);
+    if (attachments.length + fileArray.length > 5) {
+      alert('Hệ thống chỉ cho phép đính kèm tối đa 5 tệp tin theo quy định UC 2.6.1.');
+      return;
+    }
     fileArray.forEach((file) => {
       const sizeStr =
         file.size < 1024 * 1024

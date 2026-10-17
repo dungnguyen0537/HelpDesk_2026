@@ -19,11 +19,13 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { useTicketStore } from '../../store/ticketStore';
 
 export default function CustomerPortalPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const allTickets = useTicketStore((state) => state.tickets);
 
   // Service Catalog Categories
   const categories = [
@@ -61,31 +63,55 @@ export default function CustomerPortalPage() {
     },
   ];
 
-  // User's Active Tickets
-  const [myTickets] = useState([
-    {
-      id: 'TK-20260327-0012',
-      title: 'Màn hình máy tính Dell 24 inch tại bàn làm việc bị sọc ngang',
-      category: 'Phần cứng',
-      createdAt: 'Hôm nay, 14:15',
-      status: 'IN_PROGRESS',
-      statusLabel: 'Đang xử lý',
-      statusColor: 'bg-blue-50 text-blue-700 border-blue-200',
-      agent: 'Trần Văn Bình (Kỹ Thuật Viên)',
-      eta: 'Dự kiến xong trong 45 phút',
-    },
-    {
-      id: 'TK-20260325-0089',
-      title: 'Xin cấp quyền truy cập thư mục Báo cáo Tài chính Q1/2026',
-      category: 'Tài khoản',
-      createdAt: '2 ngày trước',
-      status: 'RESOLVED',
-      statusLabel: 'Đã hoàn thành',
-      statusColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      agent: 'Lê Thị Cúc (Quản Lý)',
-      eta: 'Đã hoàn tất lúc 16:30 hôm qua',
-    },
-  ]);
+  // Status helper mapping
+  const getStatusMeta = (status) => {
+    switch (status) {
+      case 'NEW':
+        return { label: 'Chờ tiếp nhận', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+      case 'ASSIGNED':
+        return { label: 'Đã phân công', color: 'bg-purple-50 text-purple-700 border-purple-200' };
+      case 'IN_PROGRESS':
+        return { label: 'Đang xử lý', color: 'bg-blue-50 text-blue-700 border-blue-200' };
+      case 'WAITING_USER':
+        return { label: 'Chờ bạn phản hồi', color: 'bg-orange-50 text-orange-700 border-orange-200' };
+      case 'RESOLVED':
+        return { label: 'Đã giải quyết', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+      case 'CLOSED':
+        return { label: 'Đã đóng', color: 'bg-slate-100 text-slate-700 border-slate-200' };
+      case 'CANCELLED':
+        return { label: 'Đã hủy', color: 'bg-rose-50 text-rose-700 border-rose-200' };
+      default:
+        return { label: status, color: 'bg-slate-100 text-slate-600 border-slate-200' };
+    }
+  };
+
+  // User's Active Tickets (from global store)
+  const myTickets = (allTickets || [])
+    .filter((t) => {
+      if (!user) return true;
+      return (
+        t.creator === user.fullName ||
+        t.creatorEmail === user.email ||
+        t.requester === user.fullName ||
+        user.role === 'ADMIN' ||
+        user.role === 'CUSTOMER'
+      );
+    })
+    .slice(0, 5)
+    .map((t) => {
+      const meta = getStatusMeta(t.status);
+      return {
+        id: t.id,
+        title: t.title,
+        category: t.category || 'Hỗ trợ CNTT',
+        createdAt: t.createdAt ? new Date(t.createdAt).toLocaleDateString('vi-VN') : 'Hôm nay',
+        status: t.status,
+        statusLabel: meta.label,
+        statusColor: meta.color,
+        agent: t.assignee || t.assignedTo || 'Chờ tiếp nhận',
+        eta: t.slaRemaining || 'Theo tiêu chuẩn SLA',
+      };
+    });
 
   // Quick Help articles
   const quickFaqs = [
