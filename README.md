@@ -17,7 +17,8 @@
 1. [Tổng Quan Đề Tài & Bài Toán Thực Tế](#1-tổng-quan-đề-tài--bài-toán-thực-tế)
 2. [Thông Tin Triển Khai Thực Tế (Live Production)](#2-thông-tin-triển-khai-thực-tế-live-production)
 3. [Kiến Trúc Hệ Thống (System Architecture)](#3-kiến-trúc-hệ-thống-system-architecture)
-4. [Đặc Tả 10 Phân Hệ Chức Năng Cốt Lõi (YC1 - YC10)](#4-đặc-tả-10-phân-hệ-chức-năng-cốt-lõi-yc1---yc10)
+4. [Biểu Đồ Phân Rã Chức Năng (Functional Decomposition Diagram)](#4-biểu-đồ-phân-rã-chức-năng-functional-decomposition-diagram)
+5. [Đặc Tả 10 Phân Hệ Chức Năng Cốt Lõi (YC1 - YC10)](#5-đặc-tả-10-phân-hệ-chức-năng-cốt-lõi-yc1---yc10)
 5. [Thiết Kế Cơ Sở Dữ Liệu (14 Bảng Thực Thể JPA)](#5-thiết-kế-cơ-sở-dữ-liệu-14-bảng-thực-thể-jpa)
 6. [Hệ Thống RESTful API & WebSocket](#6-hệ-thống-restful-api--websocket)
 7. [Chính Sách Cam Kết Dịch Vụ (SLA) & Cơ Chế Leo Thang](#7-chính-sách-cam-kết-dịch-vụ-sla--cơ-chế-leo-thang)
@@ -89,7 +90,90 @@ Hệ thống được thiết kế theo mô hình **3-Tier Micro-Architecture** 
 
 ---
 
-## 4. Đặc Tả 10 Phân Hệ Chức Năng Cốt Lõi (YC1 - YC10)
+## 4. Biểu Đồ Phân Rã Chức Năng (Functional Decomposition Diagram)
+
+Hệ thống được chuẩn hóa phân rã thành **4 Phân hệ cấp cao**, chia nhánh thành các khối chức năng cụ thể và luồng nghiệp vụ chi tiết:
+
+```mermaid
+graph TD
+    Root["HỆ THỐNG HELPDESK ENTERPRISE"]
+
+    Root --> M1["1. PHÂN HỆ QUẢN TRỊ & HỆ THỐNG"]
+    Root --> M2["2. PHÂN HỆ VẬN HÀNH & XỬ LÝ (ITSM)"]
+    Root --> M3["3. PHÂN HỆ CỔNG TỰ PHỤC VỤ (PORTAL)"]
+    Root --> M4["4. PHÂN HỆ GIÁM SÁT & BÁO CÁO (BI)"]
+
+    %% Cấp 2 của Phân hệ 1
+    M1 --> M1_1["1.1. Xác thực & Kiểm soát truy cập"]
+    M1 --> M1_2["1.2. Quản lý Tổ chức & Người dùng"]
+    M1 --> M1_3["1.3. Cấu hình Danh mục & Độ ưu tiên"]
+    M1 --> M1_4["1.4. Thiết lập Chính sách SLA"]
+
+    M1_1 --> M1_1_A["Đăng nhập/Đăng xuất JWT"]
+    M1_1 --> M1_1_B["Phân quyền 4 vai trò (RBAC)"]
+    M1_1 --> M1_1_C["Kiểm soát xét duyệt đăng ký"]
+
+    M1_2 --> M1_2_A["Quản lý cơ cấu Phòng ban"]
+    M1_2 --> M1_2_B["Quản lý danh sách tài khoản"]
+    M1_2 --> M1_2_C["Hồ sơ kỹ thuật & Phân tải"]
+
+    M1_3 --> M1_3_A["Cây danh mục sự cố đa cấp"]
+    M1_3 --> M1_3_B["Gán phòng ban phụ trách"]
+    M1_3 --> M1_3_C["Cấu hình trọng số ưu tiên"]
+
+    M1_4 --> M1_4_A["Ma trận SLA phản hồi (MTTA)"]
+    M1_4 --> M1_4_B["Ma trận SLA giải quyết (MTTR)"]
+    M1_4 --> M1_4_C["Quy tắc tự động leo thang"]
+
+    %% Cấp 2 của Phân hệ 2
+    M2 --> M2_1["2.1. Tiếp nhận & Điều phối"]
+    M2 --> M2_2["2.2. Xử lý Kỹ thuật & Vòng đời"]
+    M2 --> M2_3["2.3. Tương tác & Nhật ký"]
+
+    M2_1 --> M2_1_A["Tự động sinh mã chuẩn ITIL"]
+    M2_1 --> M2_1_B["Điều phối thủ công & Tự nhận (Claim)"]
+
+    M2_2 --> M2_2_A["Luồng chuyển trạng thái 6 bước ITIL"]
+    M2_2 --> M2_2_B["Cơ chế tạm dừng & kích hoạt lại SLA"]
+    M2_2 --> M2_2_C["Bắt buộc ghi nhận Nguyên nhân & Giải pháp"]
+
+    M2_3 --> M2_3_A["Bình luận công khai & Ghi chú nội bộ"]
+    M2_3 --> M2_3_B["Đính kèm đa tệp tin & Nhật ký Audit Log"]
+
+    %% Cấp 2 của Phân hệ 3
+    M3 --> M3_1["3.1. Cổng Khách Hàng (Customer Portal)"]
+    M3 --> M3_2["3.2. Quản lý Yêu Cầu Cá Nhân"]
+    M3 --> M3_3["3.3. Cơ Sở Tri Thức (Knowledge Base)"]
+
+    M3_1 --> M3_1_A["Bảng điều khiển cá nhân & Form gửi yêu cầu"]
+    M3_1 --> M3_1_B["Khảo sát hài lòng CSAT 1-5 sao"]
+
+    M3_2 --> M3_2_A["Cách ly dữ liệu (Chỉ xem phiếu của mình)"]
+    M3_2 --> M3_2_B["Theo dõi SLA & Yêu cầu Mở lại/Hủy phiếu"]
+
+    M3_3 --> M3_3_A["Tìm kiếm bài viết hướng dẫn xử lý (FAQ)"]
+    M3_3 --> M3_3_B["Đánh giá độ hữu ích bài viết"]
+
+    %% Cấp 2 của Phân hệ 4
+    M4 --> M4_1["4.1. Bảng Thông Tin Trực Quan (Dashboard)"]
+    M4 --> M4_2["4.2. Báo Cáo Hiệu Suất (KPI & CSAT)"]
+    M4 --> M4_3["4.3. Giám Sát Cảnh Báo SLA"]
+
+    M4_1 --> M4_1_A["Thống kê tổng hợp thời gian thực"]
+    M4_1 --> M4_1_B["Biểu đồ phân bổ trạng thái & phòng ban"]
+
+    M4_2 --> M4_2_A["Đo lường năng suất kỹ thuật viên"]
+    M4_2 --> M4_2_B["Xuất báo cáo định dạng Excel/PDF"]
+
+    M4_3 --> M4_3_A["Đồng hồ đếm ngược vi phạm hạn chót"]
+    M4_3 --> M4_3_B["Tự động chuyển cấp khi quá hạn xử lý"]
+```
+
+> Chi tiết đặc tả phân rã cấu trúc và ma trận quan hệ Use Case được lưu trữ tại tài liệu: [docs/functional_decomposition.md](file:///c:/HelpDesk/docs/functional_decomposition.md).
+
+---
+
+## 5. Đặc Tả 10 Phân Hệ Chức Năng Cốt Lõi (YC1 - YC10)
 
 Tuân thủ nghiêm ngặt góp ý của Giảng viên hướng dẫn: *"Gắn các yêu cầu cùng nhóm vào một nội dung nghiệp vụ hoàn chỉnh"*, hệ thống được quy hoạch thành 10 nhóm chức năng:
 
