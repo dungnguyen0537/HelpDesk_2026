@@ -8,6 +8,7 @@ import {
   BarChart3,
   Users,
   Building2,
+  FolderTree,
   ClockAlert,
   ChevronLeft,
   ChevronRight,
@@ -52,7 +53,8 @@ export default function Sidebar({ mobileOpen = false, onCloseMobile }) {
             title: 'QUẢN TRỊ HỆ THỐNG',
             items: [
               { label: 'Người dùng', path: '/admin/users', icon: Users },
-              { label: 'Phòng ban & Mục', path: '/admin/departments', icon: Building2 },
+              { label: 'Phòng ban', path: '/admin/departments', icon: Building2 },
+              { label: 'Danh mục sự cố', path: '/admin/categories', icon: FolderTree },
               { label: 'Chính sách SLA', path: '/admin/sla-policies', icon: ClockAlert },
             ],
           },

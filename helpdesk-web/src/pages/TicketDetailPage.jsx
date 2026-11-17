@@ -17,6 +17,7 @@ import {
   X,
   Download,
   FileText,
+  Star,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -846,48 +847,51 @@ export default function TicketDetailPage() {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-2 text-center">
-                  Mức độ hài lòng của bạn về dịch vụ:
-                </label>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed">
+                Bạn xác nhận sự cố <strong className="text-slate-900">"{ticket.title}"</strong> đã được kỹ thuật viên xử lý thỏa đáng.
+              </div>
+
+              {/* Star Rating Selector matching Figure 3.3.3 */}
+              <div className="space-y-2 text-center py-2">
+                <span className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Mức độ hài lòng của bạn (1 - 5 sao):
+                </span>
                 <div className="flex items-center justify-center space-x-2">
-                  {[1, 2, 3, 4, 5].map((score) => (
+                  {[1, 2, 3, 4, 5].map((star) => (
                     <button
-                      key={score}
+                      key={star}
                       type="button"
-                      onClick={() => setRatingScore(score)}
-                      className={`w-10 h-10 rounded-xl text-sm font-bold border transition-all ${
-                        ratingScore === score
-                          ? 'bg-amber-500 text-white border-amber-600 shadow-sm scale-110'
-                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
+                      onClick={() => setRatingScore(star)}
+                      className="p-1.5 transition-transform hover:scale-125 focus:outline-none cursor-pointer"
                     >
-                      {score}
+                      <Star
+                        className={`w-8 h-8 ${
+                          star <= ratingScore
+                            ? 'text-amber-400 fill-amber-400'
+                            : 'text-slate-300'
+                        }`}
+                      />
                     </button>
                   ))}
                 </div>
-                <div className="text-center text-[11px] text-slate-500 mt-1.5">
-                  {ratingScore === 5
-                    ? 'Rất hài lòng'
-                    : ratingScore === 4
-                    ? 'Hài lòng'
-                    : ratingScore === 3
-                    ? 'Bình thường'
-                    : ratingScore === 2
-                    ? 'Chưa hài lòng'
-                    : 'Rất không hài lòng'}
-                </div>
+                <span className="text-xs font-semibold text-amber-700 block italic">
+                  {ratingScore === 5 && 'Rất hài lòng - Xử lý xuất sắc!'}
+                  {ratingScore === 4 && 'Hài lòng - Dịch vụ tốt'}
+                  {ratingScore === 3 && 'Bình thường - Chấp nhận được'}
+                  {ratingScore === 2 && 'Chưa hài lòng - Còn chậm'}
+                  {ratingScore === 1 && 'Rất không hài lòng'}
+                </span>
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-700">
-                  Ý kiến đóng góp thêm (Tùy chọn):
+                  Nhận xét đóng góp ý kiến (Tùy chọn):
                 </label>
                 <textarea
                   rows={3}
                   value={ratingFeedback}
                   onChange={(e) => setRatingFeedback(e.target.value)}
-                  placeholder="Nhận xét về thái độ phục vụ hoặc tốc độ xử lý..."
+                  placeholder="Ý kiến khen ngợi hoặc phản ánh để nâng cao chất lượng hỗ trợ..."
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                 />
               </div>
@@ -898,7 +902,7 @@ export default function TicketDetailPage() {
                   onClick={() => setShowRatingModal(false)}
                   className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
                 >
-                  Để sau
+                  Hủy
                 </button>
                 <Button
                   type="button"

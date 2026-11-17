@@ -12,6 +12,7 @@ import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import ReportsPage from './pages/ReportsPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminDepartmentsPage from './pages/AdminDepartmentsPage';
+import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import AdminSlaPoliciesPage from './pages/AdminSlaPoliciesPage';
 import ProfilePage from './pages/ProfilePage';
 
@@ -105,6 +106,14 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
                 <AdminDepartmentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/categories"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminCategoriesPage />
               </ProtectedRoute>
             }
           />
